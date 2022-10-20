@@ -27,20 +27,18 @@ def get_dataframe(data):
   txns_list = []
 
   for row in data:
-    # if row.n_unique_buyers == 0.0:
-    #     continue
     dic = {
         'Txn Hash': row.txn_hash, 
-        # 'UnixTimestamp': row.time_stamp,
-        # 'Date Time (UTC)': row.date_time,
-        # 'Action': row.action,
-        # 'Buyer': row.buyer,
-        # 'NFT': row.nft,
+        'UnixTimestamp': row.time_stamp,
+        'Date Time (UTC)': row.date_time,
+        'Action': row.action,
+        'Buyer': row.buyer,
+        'NFT': row.nft,
         'Token ID': row.token_id,
-        # 'Type': row.type_,
-        # 'Quantity': row.quantity,
-        # 'Price': row.price,
-        # 'Market': row.market,
+        'Type': row.type_,
+        'Quantity': row.quantity,
+        'Price': row.price,
+        'Market': row.market,
         'Unique Buyers': row.n_unique_buyers
     }
     txns_list.append(dic)
