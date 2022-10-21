@@ -70,7 +70,7 @@ def counting_sort_by_nbuyer(A, exp):
     count = [0] * (10)
  
     # Store count of occurrences in count[]
-    for i in range(n):
+    for i in range(0, n):
         index = int(A[i].n_unique_buyers) // exp
         index = int(index)
 
