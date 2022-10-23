@@ -1,5 +1,6 @@
 import pandas as pd 
 import time
+from utils import currency_converter
 
 from merge_sort import merge_sort_by_nbuyer, merge_sort_by_tokenid
 from quick_sort import quick_sort_by_nbuyer, quick_sort_by_tokenid
@@ -12,8 +13,15 @@ def main():
 
     transactions = prepare_data(data)
 
+    elapsed_time_averages = []
+    for i in range(92):
+        aveg_elapsed_time_ns = run_n_times(transactions[i * 1000: (i + 1) * 1000], 2)
+        elapsed_time_averages.append(aveg_elapsed_time_ns)
+
+
+def run_n_times(transactions, n):
     elapsed_times = []
-    for i in range(10):
+    for i in range(n):
         elapsed_time, sorted_txns = run_query(transactions, run=i+1)
         elapsed_times.append(elapsed_time)
 
@@ -21,19 +29,21 @@ def main():
     aveg_elapsed_time_s = aveg_elapsed_time_ns/1e9
     print(f"\nThe average elapsed time is {aveg_elapsed_time_ns} nano secs (i.e {aveg_elapsed_time_s} secs)\n")
 
+    return aveg_elapsed_time_ns
+
 
 def run_query(transactions, run=1):
     start_time1 = time.perf_counter_ns()
-    # sorted_txns = radix_sort_by_token_id(transactions)
-    sorted_txns = merge_sort_by_tokenid(transactions)
+    sorted_txns = radix_sort_by_token_id(transactions)
+    # sorted_txns = merge_sort_by_tokenid(transactions)
     # sorted_txns = quick_sort_by_tokenid(transactions) 
     end_time1 = time.perf_counter_ns()
 
     sorted_txns = update_with_n_unique_buyers(sorted_txns)
 
     start_time2 = time.perf_counter_ns()
-    # nbuyer_sorted_txns = radix_sort_by_nbuyer(sorted_txns)
-    nbuyer_sorted_txns = merge_sort_by_nbuyer(sorted_txns)
+    nbuyer_sorted_txns = radix_sort_by_nbuyer(sorted_txns)
+    # nbuyer_sorted_txns = merge_sort_by_nbuyer(sorted_txns)
     # nbuyer_sorted_txns = quick_sort_by_nbuyer(sorted_txns)
     end_time2 = time.perf_counter_ns()
 
@@ -42,10 +52,14 @@ def run_query(transactions, run=1):
     print(f"Run - {run} Sorting took {elapsed_time} nano secs")
 
     # df = get_dataframe(nbuyer_sorted_txns)
-    # print(df.head(10))
+    # print(df.head(6))
 
     return elapsed_time, nbuyer_sorted_txns
 
 
 if __name__ == "__main__":
     main()
+    # data = pd.read_excel("Consolidated file for Aug 5 - Aug 13.xlsx")
+    # data = currency_converter(data)
+    # df = get_dataframe(data)
+    # print(df.head(6))
