@@ -1,11 +1,10 @@
 import pandas as pd 
 import time
-from utils import currency_converter
+from utils import update_with_n_unique_txns, currency_converter, get_ml_dataframe, prepare_data, update_with_n_unique_buyers
 
-from merge_sort import merge_sort_by_nbuyer, merge_sort_by_tokenid
+from merge_sort import merge_sort_by_nbuyer, merge_sort_by_tokenid, merge_sort_by_ntxn
 from quick_sort import quick_sort_by_nbuyer, quick_sort_by_tokenid
 from radix_sort import radix_sort_by_nbuyer, radix_sort_by_token_id
-from utils import get_dataframe, prepare_data, update_with_n_unique_buyers
 
 def main():
     data = pd.read_excel("Consolidated file for Aug 5 - Aug 13.xlsx")
@@ -13,11 +12,24 @@ def main():
 
     transactions = prepare_data(data)
 
-    elapsed_time_averages = []
-    for i in range(92):
-        aveg_elapsed_time_ns = run_n_times(transactions[i * 1000: (i + 1) * 1000], 2)
-        elapsed_time_averages.append(aveg_elapsed_time_ns)
+    # elapsed_time_averages = []
+    # for i in range(92):
+    #     aveg_elapsed_time_ns = run_n_times(transactions[i * 1000: (i + 1) * 1000], 2)
+    #     elapsed_time_averages.append(aveg_elapsed_time_ns)
 
+    # test_ml_util(transactions)
+
+    test_ml_util(transactions)
+
+def test_ml_util(transactions):
+    sorted_txns = merge_sort_by_tokenid(transactions)
+    sorted_txns = update_with_n_unique_txns(sorted_txns)
+
+    sorted_by_nbuyer = merge_sort_by_nbuyer(sorted_txns)
+    sorted_by_ntxns = merge_sort_by_ntxn(sorted_by_nbuyer)
+
+    df = get_ml_dataframe(sorted_by_ntxns)
+    print(df.head(6))
 
 def run_n_times(transactions, n):
     elapsed_times = []
@@ -34,16 +46,16 @@ def run_n_times(transactions, n):
 
 def run_query(transactions, run=1):
     start_time1 = time.perf_counter_ns()
-    sorted_txns = radix_sort_by_token_id(transactions)
-    # sorted_txns = merge_sort_by_tokenid(transactions)
+    # sorted_txns = radix_sort_by_token_id(transactions)
+    sorted_txns = merge_sort_by_tokenid(transactions)
     # sorted_txns = quick_sort_by_tokenid(transactions) 
     end_time1 = time.perf_counter_ns()
 
     sorted_txns = update_with_n_unique_buyers(sorted_txns)
 
     start_time2 = time.perf_counter_ns()
-    nbuyer_sorted_txns = radix_sort_by_nbuyer(sorted_txns)
-    # nbuyer_sorted_txns = merge_sort_by_nbuyer(sorted_txns)
+    # nbuyer_sorted_txns = radix_sort_by_nbuyer(sorted_txns)
+    nbuyer_sorted_txns = merge_sort_by_nbuyer(sorted_txns)
     # nbuyer_sorted_txns = quick_sort_by_nbuyer(sorted_txns)
     end_time2 = time.perf_counter_ns()
 
@@ -51,7 +63,7 @@ def run_query(transactions, run=1):
 
     print(f"Run - {run} Sorting took {elapsed_time} nano secs")
 
-    # df = get_dataframe(nbuyer_sorted_txns)
+    # df = get_nft_dataframe(nbuyer_sorted_txns)
     # print(df.head(6))
 
     return elapsed_time, nbuyer_sorted_txns
@@ -61,5 +73,5 @@ if __name__ == "__main__":
     main()
     # data = pd.read_excel("Consolidated file for Aug 5 - Aug 13.xlsx")
     # data = currency_converter(data)
-    # df = get_dataframe(data)
+    # df = get_nft_dataframe(data)
     # print(df.head(6))
