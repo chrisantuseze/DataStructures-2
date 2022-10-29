@@ -1,7 +1,7 @@
 import pandas as pd
 from datetime import datetime
 
-from typing import Optional, Tuple, List
+from typing import List
 from ml_data import MLData
 from nfttransaction_data import NFTTransaction
 

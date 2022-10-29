@@ -12,14 +12,14 @@ def main():
 
     transactions = prepare_data(data)
 
-    # elapsed_time_averages = []
-    # for i in range(92):
-    #     aveg_elapsed_time_ns = run_n_times(transactions[i * 1000: (i + 1) * 1000], 2)
-    #     elapsed_time_averages.append(aveg_elapsed_time_ns)
+    elapsed_time_averages = []
+    for i in range(int(len(transactions)/1000)):
+        print(f"{(i + 1) * 1000} transactions")
+
+        aveg_elapsed_time_ns = run_n_times(transactions[i * 1000: (i + 1) * 1000], 2)
+        elapsed_time_averages.append(aveg_elapsed_time_ns)
 
     # test_ml_util(transactions)
-
-    test_ml_util(transactions)
 
 def test_ml_util(transactions):
     sorted_txns = merge_sort_by_tokenid(transactions)
