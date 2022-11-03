@@ -1,5 +1,0 @@
-1. Sort by buyer id
-2. Count number of transactions per buyer id and add to a new column
-3. Count numnber of unique nfts per buyer and add to a new column
-4. Sort by number of unique nfts
-5. If there is a tie, sort those tie by number of transactions

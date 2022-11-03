@@ -2,9 +2,9 @@ import pandas as pd
 import numpy as np
 import time
 from utils import plot_graph
-from utils import prepare_data, update_with_n_unique_buyers
+from utils import prepare_data
 
-from merge_sort import merge_sort_by_nbuyer, merge_sort_by_tokenid
+from query4_merge_sort import sort_query4
 
 def main():
     data = pd.read_csv("full_dataset.csv")
@@ -16,7 +16,7 @@ def main():
         print(f"{(i + 1) * 1000} transactions")
 
         n = (i + 1) * 1000
-        aveg_elapsed_time_ns = run_n_times(transactions[0: n], 100)
+        aveg_elapsed_time_ns = run_n_times(transactions[0: n], 2)
         elapsed_time_averages.append(aveg_elapsed_time_ns)
 
         n *= 5000
@@ -38,21 +38,15 @@ def run_n_times(transactions, n):
 
 
 def run_query(transactions, run=1):
-    start_time1 = time.time_ns()
-    sorted_txns = merge_sort_by_tokenid(transactions)
-    end_time1 = time.time_ns()
+    start_time = time.time_ns()
+    sorted_txns = sort_query4(transactions)
+    end_time = time.time_ns()
 
-    sorted_txns = update_with_n_unique_buyers(sorted_txns)
-
-    start_time2 = time.time_ns()
-    nbuyer_sorted_txns = merge_sort_by_nbuyer(sorted_txns)
-    end_time2 = time.time_ns()
-
-    elapsed_time = (end_time1 - start_time1) + (end_time2 - start_time2)
+    elapsed_time = (end_time - start_time)
 
     # print(f"Run - {run} Sorting took {elapsed_time} nano secs")
 
-    return elapsed_time, nbuyer_sorted_txns
+    return elapsed_time, sorted_txns
 
 
 if __name__ == "__main__":

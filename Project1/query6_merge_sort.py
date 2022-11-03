@@ -1,7 +1,10 @@
 from typing import List
+import numpy as np
 
 from nfttransaction_data import NFTTransaction
 from ml_data import MLData
+from query6_utils import update_with_n_unique_txns
+from query6_data import Query6Data, Query6Input
 
 def merge_sort_by_tokenid(A):
     if len(A) == 1:
@@ -28,6 +31,22 @@ def merge_by_tokenid(L, R):
             j = j + 1
 
     return B
+
+
+def sort_query6(A: List[Query6Input]):
+    hash = {}
+    for row in A:
+        if row.token_id in hash:
+            hash[row.token_id].append(row)
+        else:
+            hash[row.token_id] = [row]
+        
+    transactions = []
+    for key in hash:
+        transactions = np.concatenate((transactions, hash[key]))
+
+    A = update_with_n_unique_txns(transactions)
+    return merge_sort_by_ntxn(A)
 
 def merge_sort_by_ntxn(A: List[MLData]):
     if len(A) == 1:

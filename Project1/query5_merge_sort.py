@@ -1,5 +1,7 @@
 from typing import List
-from query5_data import Query5Data
+import numpy as np
+from query5_data import Query5Data, Query5Input
+from query5_utils import update_with_n_unique_nfts_without_nft_names
 
 def merge_sort_by_buyer_id(A) -> List[Query5Data]:
     if len(A) == 1:
@@ -26,6 +28,23 @@ def merge_by_buyer_id(L: List[Query5Data], R: List[Query5Data]) -> List[Query5Da
             j = j + 1
 
     return B
+
+
+def sort_query5(A: List[Query5Input]):
+    hash = {}
+    for row in A:
+        if row.buyer in hash:
+            hash[row.buyer].append(row)
+        else:
+            hash[row.buyer] = [row]
+        
+    transactions = []
+    for key in hash:
+        transactions = np.concatenate((transactions, hash[key]))
+
+    A = update_with_n_unique_nfts_without_nft_names(transactions)
+    A = merge_sort_by_n_nft(A)
+    return sort_by_txns(A)
 
 def merge_sort_by_n_nft(A: List[Query5Data]) -> List[Query5Data]:
     if len(A) == 1:
