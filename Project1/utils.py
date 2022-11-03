@@ -1,5 +1,8 @@
 import pandas as pd
 from datetime import datetime
+import matplotlib.pyplot as plt 
+# import seaborn as sns
+# %matplotlib inline
 
 from typing import List
 from ml_data import MLData
@@ -210,3 +213,16 @@ def get_ml_dataframe(data: List[MLData]):
 
   df = pd.DataFrame.from_records(txns_list)
   return df
+
+def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_4.png"):
+  x_axis = [i for i in range(92)]
+  plt.plot(x_axis, asymptotic_runtimes, color ='red')
+  plt.plot(x_axis, actual_runtimes, color ='blue')
+  plt.xlabel("Transaction Batch (x1000)")
+  plt.ylabel("Runtime")
+  plt.title("Runtime vs Transaction batch size")
+  plt.legend(['Asymptotic Runtime (x5000)', 'Actual Runtime ((x10000))'], loc='upper left')
+
+  plt.savefig(filename)
+
+  plt.show()
