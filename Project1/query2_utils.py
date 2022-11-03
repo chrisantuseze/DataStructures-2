@@ -1,9 +1,9 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from query3_data import Query3Data
+from query2_data import Query3Data
 import numpy as np
-from query3_merge_sort import mergeSort
+from query2_merge_sort import mergeSort
 
 
 def sort_by_avg_price(transactions):
@@ -74,6 +74,7 @@ def get_dataframe(data):
     txns_list.append(dic)
 
   df = pd.DataFrame.from_records(txns_list)
+  df.to_excel('query2_out.xlsx') 
   return df
 
   

@@ -1,6 +1,6 @@
 from typing import List
 
-from query3_data import Query3Data
+from query2_data import Query3Data
 
 
 def merge(arr, l, m, r):

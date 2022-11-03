@@ -1,9 +1,12 @@
 import pandas as pd 
 import numpy as np
-import time
-from query5_utils import plot_graph
+from typing import List
 
-from query5_merge_sort import sort_query5
+import time
+from query5_utils import plot_graph, update_with_n_unique_nfts_without_nft_names
+from query5_data import Query5Data, Query5Input
+
+from query5_merge_sort import merge_sort_by_n_nft, sort_by_txns
 from query5_utils import prepare_data
 
 def main():
@@ -37,15 +40,36 @@ def run_n_times(transactions, n):
     return aveg_elapsed_time_ns
     
 def run_query(transactions, run=1):
-    start_time = time.time_ns()
     sorted_txns = sort_query5(transactions)
-    end_time = time.time_ns()
+    
+    start_time1 = time.time_ns()
+    sorted_txns = merge_sort_by_n_nft(sorted_txns)
+    end_time1 = time.time_ns()
 
-    elapsed_time = (end_time - start_time)
+    start_time2 = time.time_ns()
+    sorted_txns = sort_by_txns(sorted_txns)
+    end_time2 = time.time_ns()
+
+    elapsed_time = (end_time1 - start_time1) + (end_time2 - start_time2)
 
     # print(f"Run - {run} Sorting took {elapsed_time} nano secs")
 
     return elapsed_time, sorted_txns
+
+def sort_query5(A: List[Query5Input]):
+    hash = {}
+    for row in A:
+        if row.buyer in hash:
+            hash[row.buyer].append(row)
+        else:
+            hash[row.buyer] = [row]
+        
+    transactions = []
+    for key in hash:
+        transactions = np.concatenate((transactions, hash[key]))
+
+    A = update_with_n_unique_nfts_without_nft_names(transactions)
+    return A
 
 if __name__ == "__main__":
     main()

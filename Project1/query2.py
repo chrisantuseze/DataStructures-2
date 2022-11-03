@@ -1,8 +1,8 @@
 import pandas as pd 
 import numpy as np
 import time
-from query3_utils import plot_graph
-from query3_utils import sort_by_avg_price, currency_converter
+from query2_utils import plot_graph
+from query2_utils import sort_by_avg_price, currency_converter
 
 def main():
     data = pd.read_csv("full_dataset.csv")

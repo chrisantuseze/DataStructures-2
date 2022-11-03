@@ -1,8 +1,13 @@
 import pandas as pd 
 import numpy as np
+from typing import List
+
 import time
 from utils import plot_graph
 from utils import prepare_data
+from query4_merge_sort import merge_sort_by_nbuyer
+from query4_data import Query4Data, Query4Input
+from query4_utils import update_with_n_unique_buyers
 
 from query4_merge_sort import sort_query4
 
@@ -38,8 +43,10 @@ def run_n_times(transactions, n):
 
 
 def run_query(transactions, run=1):
-    start_time = time.time_ns()
     sorted_txns = sort_query4(transactions)
+
+    start_time = time.time_ns()
+    sorted_txns = merge_sort_by_nbuyer(sorted_txns)
     end_time = time.time_ns()
 
     elapsed_time = (end_time - start_time)
@@ -48,6 +55,20 @@ def run_query(transactions, run=1):
 
     return elapsed_time, sorted_txns
 
+def sort_query4(A: List[Query4Input]):
+    hash = {}
+    for row in A:
+        if row.token_id in hash:
+            hash[row.token_id].append(row)
+        else:
+            hash[row.token_id] = [row]
+        
+    transactions = []
+    for key in hash:
+        transactions = np.concatenate((transactions, hash[key]))
+
+    A = update_with_n_unique_buyers(transactions)
+    return A
 
 if __name__ == "__main__":
     main()
