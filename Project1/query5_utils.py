@@ -22,8 +22,8 @@ def get_dataframe(data: List[Query5Data]):
   for row in data:
     dic = {
         'Buyer': row.buyer,
-        # 'NFT': row.nft,
-        # 'Transactions Per NFT': row.n_txns_for_nft,
+        'NFT': row.nft,
+        'Transactions Per NFT': row.n_txns_for_nft,
         'Total NFT': row.total_unique_nft,
         'Total Transactions': row.total_txns
     }

@@ -25,7 +25,7 @@ def get_dataframe(data: List[Query4Data]):
   for row in data:
     dic = {
         'Token ID': row.token_id,
-        'Unique Buyers': row.n_unique_buyer,
+        'Unique Buyers': row.n_unique_buyers,
     }
     txns_list.append(dic)
 
@@ -48,17 +48,17 @@ def update_with_n_unique_buyers(sorted_txns: List[Query4Input]) -> List[Query4Da
 
       # This is for the scenario when the transaction is the last in the array (spreadsheet)
       if i == n - 1:
-          data = Query4Data(token_id=sorted_txns[i].token_id, n_unique_buyer=unique_count)
+          data = Query4Data(token_id=sorted_txns[i].token_id, n_unique_buyers=unique_count)
           new_txns.append(data)
 
       elif sorted_txns[i].token_id != sorted_txns[i+1].token_id:
-          data = Query4Data(token_id=sorted_txns[i].token_id, n_unique_buyer=unique_count)
+          data = Query4Data(token_id=sorted_txns[i].token_id, n_unique_buyers=unique_count)
           new_txns.append(data)
 
           unique_count = 0
           unique_buyers = []
 
-  return sorted_txns
+  return new_txns
 
 def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_4.png"):
     x_axis = [i for i in range(92)]

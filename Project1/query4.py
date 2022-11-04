@@ -3,13 +3,11 @@ import numpy as np
 from typing import List
 
 import time
-from utils import plot_graph
-from utils import prepare_data
+from query4_utils import plot_graph
+from query4_utils import prepare_data
 from query4_merge_sort import merge_sort_by_nbuyer
 from query4_data import Query4Data, Query4Input
-from query4_utils import update_with_n_unique_buyers
-
-from query4_merge_sort import sort_query4
+from query4_utils import update_with_n_unique_buyers, get_dataframe
 
 def main():
     data = pd.read_csv("full_dataset.csv")
@@ -17,17 +15,20 @@ def main():
 
     elapsed_time_averages = []
     asymptotic_times = []
-    for i in range(int(len(transactions)/1000)):
-        print(f"{(i + 1) * 1000} transactions")
+    # for i in range(int(len(transactions)/1000)):
+    #     print(f"{(i + 1) * 1000} transactions")
 
-        n = (i + 1) * 1000
-        aveg_elapsed_time_ns = run_n_times(transactions[0: n], 2)
-        elapsed_time_averages.append(aveg_elapsed_time_ns)
+    #     n = (i + 1) * 1000
+    #     aveg_elapsed_time_ns = run_n_times(transactions[0: n], 2)
+    #     elapsed_time_averages.append(aveg_elapsed_time_ns)
 
-        n *= 5000
-        asymptotic_times.append(n * np.log10(n))
+    #     n *= 5000
+    #     asymptotic_times.append(n * np.log10(n))
 
-    plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=elapsed_time_averages)
+    # plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=elapsed_time_averages)
+
+    # This is used to print out the sorted records
+    run_query(transactions, run=0)
 
 def run_n_times(transactions, n):
     elapsed_times = []
@@ -51,11 +52,15 @@ def run_query(transactions, run=1):
 
     elapsed_time = (end_time - start_time)
 
+    if run == 0:
+        df = get_dataframe(sorted_txns)
+        print(df.head(10))
+
     # print(f"Run - {run} Sorting took {elapsed_time} nano secs")
 
     return elapsed_time, sorted_txns
 
-def sort_query4(A: List[Query4Input]):
+def sort_query4(A: List[Query4Input]) -> List[Query4Data]:
     hash = {}
     for row in A:
         if row.token_id in hash:

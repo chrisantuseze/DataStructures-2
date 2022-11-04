@@ -28,31 +28,6 @@ def prepare_data(data) -> List[NFTTransaction]:
     
   return transactions
 
-
-def get_nft_dataframe(data):
-  txns_list = []
-
-  for row in data:
-    dic = {
-        'Txn Hash': row.txn_hash, 
-        # 'UnixTimestamp': row.time_stamp,
-        # 'Date Time (UTC)': row.date_time,
-        # 'Action': row.action,
-        'Buyer': row.buyer,
-        # 'NFT': row.nft,
-        'Token ID': row.token_id,
-        # 'Type': row.type_,
-        # 'Quantity': row.quantity,
-        'Price': row.price,
-        # 'Market': row.market,
-        'Unique Buyers': row.n_unique_buyers
-    }
-    txns_list.append(dic)
-
-  df = pd.DataFrame.from_records(txns_list)
-  df.to_excel('query6_out.xlsx') 
-  return df
-
 def update_with_n_unique_txns(sorted_txns: List[NFTTransaction]) -> List[MLData]:
   # Lets sort the token ids by the number of txns
   unique_txn_count = 0
@@ -81,12 +56,29 @@ def update_with_n_unique_txns(sorted_txns: List[NFTTransaction]) -> List[MLData]
 
       if i == n - 1:
           last_buy_date = sorted_txns[i].date_time
-          new_txns_list.append(get_txn(first_buy_date, last_buy_date, sorted_txns[i].token_id, unique_txn_count, unique_buyer_count))
 
+          second_last_buy_date = None
+          if sorted_txns[i].token_id == sorted_txns[i-1].token_id:
+            second_last_buy_date = sorted_txns[i-1].date_time
+
+          third_last_buy_date = None
+          if sorted_txns[i].token_id == sorted_txns[i-2].token_id:
+            third_last_buy_date = sorted_txns[i-2].date_time
+
+          new_txns_list.append(get_txn(first_buy_date, last_buy_date, second_last_buy_date, third_last_buy_date, sorted_txns[i].token_id, unique_txn_count, unique_buyer_count))
+          
       elif sorted_txns[i].token_id != sorted_txns[i+1].token_id:
           last_buy_date = sorted_txns[i].date_time
 
-          new_txns_list.append(get_txn(first_buy_date, last_buy_date, sorted_txns[i].token_id, unique_txn_count, unique_buyer_count))
+          second_last_buy_date = None
+          if sorted_txns[i].token_id == sorted_txns[i-1].token_id:
+            second_last_buy_date = sorted_txns[i-1].date_time
+
+          third_last_buy_date = None
+          if sorted_txns[i].token_id == sorted_txns[i-2].token_id:
+            third_last_buy_date = sorted_txns[i-2].date_time
+
+          new_txns_list.append(get_txn(first_buy_date, last_buy_date, second_last_buy_date, third_last_buy_date, sorted_txns[i].token_id, unique_txn_count, unique_buyer_count))
           
           unique_txn_count = 0
           unique_txns = []
@@ -98,14 +90,27 @@ def update_with_n_unique_txns(sorted_txns: List[NFTTransaction]) -> List[MLData]
 
   return new_txns_list
 
-def get_txn(first_buy_date, last_buy_date, tokenid, n_txns, n_buyers):
-  fraudulent = 0
-  if hours_between(str(last_buy_date), str(first_buy_date)) <= 2 and n_txns > 100:
-    fraudulent = 1
+def get_txn(first_buy_date, last_buy_date, second_last_buy_date, third_last_buy_date, tokenid, n_txns, n_buyers):
+  fraudulent = "No"
+  interval_threshold_hr = 1
+  ntxn_nbuyer_ratio = 1.8
+
+  if float(n_txns/n_buyers) > ntxn_nbuyer_ratio and (
+    hours_between(last_buy_date, first_buy_date) <= interval_threshold_hr or 
+    hours_between(second_last_buy_date, first_buy_date) <= interval_threshold_hr or 
+    hours_between(third_last_buy_date, first_buy_date) <= interval_threshold_hr
+    ):
+
+    fraudulent = "Yes"
+
+  elif n_txns < n_buyers:
+      fraudulent = "Suspicious"
 
   return MLData (
       first_buy_date=first_buy_date, 
       last_buy_date=last_buy_date, 
+      second_last_buy_date=second_last_buy_date,
+      third_last_buy_date=third_last_buy_date,
       token_id=tokenid, 
       n_txns=n_txns, 
       n_unique_buyers=n_buyers, 
@@ -113,28 +118,34 @@ def get_txn(first_buy_date, last_buy_date, tokenid, n_txns, n_buyers):
     )
 
 def hours_between(last_date, start_date):
-  f = "%Y-%m-%d %H:%M:%S"
+  last_date = str(last_date)
+  start_date = str(start_date)
+
+  f = "%m/%d/%y %H:%M"
   t1 = datetime.strptime(last_date, f)
   t2 = datetime.strptime(start_date, f)
 
-  diff = (t1 - t2).seconds/360
-  return diff
+  diff_in_hours = (t1 - t2).seconds/360
+  return diff_in_hours
 
 def get_ml_dataframe(data: List[MLData]):
   txns_list = []
 
   for row in data:
     dic = {
-        'First Buy Date Time': row.first_buy_date, 
-        'Last Buy Date Time': row.last_buy_date,
+        'First Buy Time': row.first_buy_date, 
+        'Last Buy Time': row.last_buy_date,
+        'Second Last Buy Time': row.second_last_buy_date,
+        'Third Last Buy Time': row.third_last_buy_date,
         'Token ID': row.token_id,
-        'Number of Transactions': row.n_txns,
+        'Number of Txns': row.n_txns,
         'Number of Unique Buyers': row.n_unique_buyers,
         'Fraudulent': row.fraudulent,
     }
     txns_list.append(dic)
 
   df = pd.DataFrame.from_records(txns_list)
+  df.to_excel('query6_out.xlsx') 
   return df
 
 def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_6.png"):

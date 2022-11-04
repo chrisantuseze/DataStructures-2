@@ -43,7 +43,7 @@ def sort_by_avg_price(transactions):
    # print(i)
     #print(count)
     #print("------------")
-  #return transactions_with_avg_price
+  return transactions_with_avg_price
 
 def prepare_data(data) -> list[Query3Data]:
   data = data.reset_index()  # make sure indexes pair with number of rows

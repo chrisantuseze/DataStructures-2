@@ -32,7 +32,7 @@ def merge_by_tokenid(L, R):
 
     return B
 
-def merge_sort_by_nbuyer(A):
+def merge_sort_by_nbuyer(A: List[Query4Data]) -> List[Query4Data]:
     if len(A) == 1:
         return A
 
@@ -44,7 +44,7 @@ def merge_sort_by_nbuyer(A):
     R = merge_sort_by_nbuyer(C)
     return merge_by_nbuyer(L, R)
 
-def merge_by_nbuyer(L, R):
+def merge_by_nbuyer(L: List[Query4Data], R: List[Query4Data]) -> List[Query4Data]:
     n = len(L) + len(R)
     i = j = 0
     B = []

@@ -3,7 +3,8 @@ import numpy as np
 from typing import List
 
 import time
-from query5_utils import plot_graph, update_with_n_unique_nfts_without_nft_names
+from query5_utils import get_dataframe
+from query5_utils import plot_graph, update_with_n_unique_nfts_without_nft_names, update_with_n_unique_nfts
 from query5_data import Query5Data, Query5Input
 
 from query5_merge_sort import merge_sort_by_n_nft, sort_by_txns
@@ -15,17 +16,20 @@ def main():
 
     elapsed_time_averages = []
     asymptotic_times = []
-    for i in range(int(len(transactions)/1000)):
-        print(f"{(i + 1) * 1000} transactions")
+    # for i in range(int(len(transactions)/1000)):
+    #     print(f"{(i + 1) * 1000} transactions")
 
-        n = (i + 1) * 1000
-        aveg_elapsed_time_ns = run_n_times(transactions[0: n], 2)
-        elapsed_time_averages.append(aveg_elapsed_time_ns)
+    #     n = (i + 1) * 1000
+    #     aveg_elapsed_time_ns = run_n_times(transactions[0: n], 2)
+    #     elapsed_time_averages.append(aveg_elapsed_time_ns)
 
-        n *= 5000
-        asymptotic_times.append(n * np.log10(n))
+    #     n *= 5000
+    #     asymptotic_times.append(n * np.log10(n))
 
-    plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=elapsed_time_averages)
+    # plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=elapsed_time_averages)
+
+    # This is used to print out the sorted records
+    run_query(transactions, run=0)
 
 def run_n_times(transactions, n):
     elapsed_times = []
@@ -52,6 +56,10 @@ def run_query(transactions, run=1):
 
     elapsed_time = (end_time1 - start_time1) + (end_time2 - start_time2)
 
+    if run == 0:
+        df = get_dataframe(sorted_txns)
+        print(df.head(10))
+
     # print(f"Run - {run} Sorting took {elapsed_time} nano secs")
 
     return elapsed_time, sorted_txns
@@ -68,7 +76,7 @@ def sort_query5(A: List[Query5Input]):
     for key in hash:
         transactions = np.concatenate((transactions, hash[key]))
 
-    A = update_with_n_unique_nfts_without_nft_names(transactions)
+    A = update_with_n_unique_nfts(transactions)
     return A
 
 if __name__ == "__main__":
