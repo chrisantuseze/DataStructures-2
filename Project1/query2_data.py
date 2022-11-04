@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 
 @dataclass(order=True)
-class Query3Data:
+class Query2Data:
     txn_hash: str
     token_id: int
     quantity: int

@@ -49,7 +49,7 @@ def merge_by_fraudulent(L: List[MLData], R: List[MLData]) -> List[MLData]:
     i = j = 0
     B = []
     for k in range(0, n):
-        if j >= len(R) or (i < len(L) and (str(L[i].fraudulent) >= str(R[j].fraudulent))):
+        if j >= len(R) or (i < len(L) and ((L[i].fraudulent_ascii) >= (R[j].fraudulent_ascii))):
             B.append(L[i])
             i = i + 1
         else:

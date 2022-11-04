@@ -1,33 +1,6 @@
 from typing import List
-import numpy as np
 from query5_data import Query5Data, Query5Input
 from query5_utils import update_with_n_unique_nfts_without_nft_names
-
-def merge_sort_by_buyer_id(A) -> List[Query5Data]:
-    if len(A) == 1:
-        return A
-
-    q = int(len(A)/2)
-    B = A[:q]
-    C = A[q:]
-
-    L = merge_sort_by_buyer_id(B)
-    R = merge_sort_by_buyer_id(C)
-    return merge_by_buyer_id(L, R)
-
-def merge_by_buyer_id(L: List[Query5Data], R: List[Query5Data]) -> List[Query5Data]:
-    n = len(L) + len(R)
-    i = j = 0
-    B = []
-    for k in range(0, n):
-        if j >= len(R) or (i < len(L) and str(L[i].buyer) >= str(R[j].buyer)):
-            B.append(L[i])
-            i = i + 1
-        else:
-            B.append(R[j])
-            j = j + 1
-
-    return B
 
 def merge_sort_by_n_nft(A: List[Query5Data]) -> List[Query5Data]:
     if len(A) == 1:

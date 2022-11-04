@@ -11,3 +11,4 @@ class MLData:
     n_txns: int
     n_unique_buyers: int
     fraudulent: str
+    fraudulent_ascii: int

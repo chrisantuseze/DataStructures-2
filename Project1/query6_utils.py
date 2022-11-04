@@ -28,6 +28,26 @@ def prepare_data(data) -> List[NFTTransaction]:
     
   return transactions
 
+def get_dataframe(data: List[MLData]):
+  txns_list = []
+
+  for row in data:
+    dic = {
+        'First Buy Time': row.first_buy_date, 
+        'Last Buy Time': row.last_buy_date,
+        'Second Last Buy Time': row.second_last_buy_date,
+        'Third Last Buy Time': row.third_last_buy_date,
+        'Token ID': row.token_id,
+        'Number of Txns': row.n_txns,
+        'Number of Unique Buyers': row.n_unique_buyers,
+        'Fraudulent': row.fraudulent,
+    }
+    txns_list.append(dic)
+
+  df = pd.DataFrame.from_records(txns_list)
+  df.to_excel('query6_out.xlsx') 
+  return df
+
 def update_with_n_unique_txns(sorted_txns: List[NFTTransaction]) -> List[MLData]:
   # Lets sort the token ids by the number of txns
   unique_txn_count = 0
@@ -114,7 +134,8 @@ def get_txn(first_buy_date, last_buy_date, second_last_buy_date, third_last_buy_
       token_id=tokenid, 
       n_txns=n_txns, 
       n_unique_buyers=n_buyers, 
-      fraudulent=fraudulent
+      fraudulent=fraudulent,
+      fraudulent_ascii=convert_string_to_ascii(fraudulent)
     )
 
 def hours_between(last_date, start_date):
@@ -128,26 +149,6 @@ def hours_between(last_date, start_date):
   diff_in_hours = (t1 - t2).seconds/360
   return diff_in_hours
 
-def get_ml_dataframe(data: List[MLData]):
-  txns_list = []
-
-  for row in data:
-    dic = {
-        'First Buy Time': row.first_buy_date, 
-        'Last Buy Time': row.last_buy_date,
-        'Second Last Buy Time': row.second_last_buy_date,
-        'Third Last Buy Time': row.third_last_buy_date,
-        'Token ID': row.token_id,
-        'Number of Txns': row.n_txns,
-        'Number of Unique Buyers': row.n_unique_buyers,
-        'Fraudulent': row.fraudulent,
-    }
-    txns_list.append(dic)
-
-  df = pd.DataFrame.from_records(txns_list)
-  df.to_excel('query6_out.xlsx') 
-  return df
-
 def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_6.png"):
     x_axis = [i for i in range(92)]
     plt.plot(x_axis, asymptotic_runtimes, color ='red')
@@ -160,3 +161,7 @@ def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_6.png"):
     plt.savefig(filename)
 
     plt.show()
+
+def convert_string_to_ascii(input):
+  a = list(input.encode('ascii'))
+  return int("".join(map(str, a)))

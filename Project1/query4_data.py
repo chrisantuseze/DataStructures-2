@@ -12,4 +12,3 @@ class Query4Input:
     txn_hash: str
     token_id: int
     buyer: str
-    # n_unique_buyer: int

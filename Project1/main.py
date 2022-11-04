@@ -78,8 +78,9 @@ def run_query(transactions, run=1):
 
 
 if __name__ == "__main__":
-    main()
-    # data = pd.read_excel("Consolidated file for Aug 5 - Aug 13.xlsx")
-    # data = currency_converter(data)
-    # df = get_nft_dataframe(data)
-    # print(df.head(6))
+    # main()
+    # a = np.fromstring('hi', dtype=np.uint8)
+    # print(a)
+    a = list("0x4549134864309380066061298379900077840065".encode('ascii'))
+    res = int("".join(map(str, a)))
+    print(res)
