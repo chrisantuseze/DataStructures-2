@@ -1,5 +1,8 @@
+from typing import List
 import pandas as pd 
 import numpy as np
+import glob
+
 import matplotlib.pyplot as plt
 import time
 from dataclasses import dataclass, field
@@ -14,9 +17,25 @@ class Query2Data:
     price: str
     avg: float
 
+@dataclass(order=True)
+class NFTTransaction:
+    txn_hash: str
+    time_stamp: str
+    date_time: str
+    action: str
+    buyer: str
+    nft: str
+    token_id: int
+    type_: int
+    quantity: int
+    price: float
+    price_str: str
+    market: str
+    n_unique_buyers: int
+
 #################################################### Merge sort ##############################################
 
-def merge(arr, l, m, r):
+def merge(A, l, m, r):
     n1 = m - l + 1
     n2 = r - m
  
@@ -26,10 +45,10 @@ def merge(arr, l, m, r):
  
     # Copy data to temp arrays L[] and R[]
     for i in range(0, n1):
-        L[i] = arr[l + i]
+        L[i] = A[l + i]
  
     for j in range(0, n2):
-        R[j] = arr[m + 1 + j]
+        R[j] = A[m + 1 + j]
  
     # Merge the temp arrays back into arr[l..r]
     i = 0     # Initial index of first subarray
@@ -38,24 +57,24 @@ def merge(arr, l, m, r):
  
     while i < n1 and j < n2:
         if L[i].avg >= R[j].avg:
-            arr[k] = L[i]
+            A[k] = L[i]
             i += 1
         else:
-            arr[k] = R[j]
+            A[k] = R[j]
             j += 1
         k += 1
  
     # Copy the remaining elements of L[], if there
     # are any
     while i < n1:
-        arr[k] = L[i]
+        A[k] = L[i]
         i += 1
         k += 1
  
     # Copy the remaining elements of R[], if there
     # are any
     while j < n2:
-        arr[k] = R[j]
+        A[k] = R[j]
         j += 1
         k += 1
  
@@ -63,7 +82,7 @@ def merge(arr, l, m, r):
 # sub-array of arr to be sorted
  
  
-def mergeSort(arr, l, r):
+def merge_sort(A, l, r):
     if l < r:
  
         # Same as (l+r)//2, but avoids overflow for
@@ -71,15 +90,23 @@ def mergeSort(arr, l, r):
         m = l+(r-l)//2
  
         # Sort first and second halves
-        mergeSort(arr, l, m)
-        mergeSort(arr, m+1, r)
-        merge(arr, l, m, r)
+        merge_sort(A, l, m)
+        merge_sort(A, m+1, r)
+        merge(A, l, m, r)
 
 ############################################ Main Program ######################################################
 
 def main():
-    data = pd.read_csv("full_dataset.csv")
-    transactions = (data)
+
+    # please replace this with the path where the dataset file is
+    files = glob.glob("/Users/chrisantuseze/VSCodeProjects/DataStructures 2/Project1/*.csv")
+
+    data = [pd.read_csv(f) for f in files]
+    data = pd.concat(data,ignore_index=True)
+    data = data.dropna()
+
+    transactions = prepare_data(data)
+    transactions = currency_converter(transactions)
 
     elapsed_time_averages = []
     asymptotic_times = []
@@ -99,7 +126,7 @@ def main():
     plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=elapsed_time_averages, rows=rows)
 
     # This is used to print out the sorted records
-    run_query(transactions, run=0)
+    # run_query(transactions, run=1)
 
 def run_n_times(transactions, n):
     elapsed_times = []
@@ -114,16 +141,15 @@ def run_n_times(transactions, n):
     return aveg_elapsed_time_ns
 
 def run_query(transactions, run=1):
-    # for item in transactions:
-    converted = currency_converter(transactions)
-
     start_time = time.time_ns()
-    sorted_txns = sort_by_avg_price(converted)
+    sorted_txns = sort_by_avg_price(transactions)
     end_time = time.time_ns()
 
     elapsed_time = end_time - start_time
 
-    if run == 0:
+    if run == 1:
+        save_result(sorted_txns, transactions)
+
         df = get_dataframe(sorted_txns)
         print(df.head(10))
 
@@ -162,48 +188,37 @@ def sort_by_avg_price(transactions):
   for key in hash:
     transactions_with_avg_price = np.concatenate((transactions_with_avg_price, hash[key]))
 
-  mergeSort(transactions_with_avg_price, 0, len(transactions_with_avg_price)-1)
+  merge_sort(transactions_with_avg_price, 0, len(transactions_with_avg_price)-1)
 
   return transactions_with_avg_price
 
-def prepare_data(data) -> list[Query2Data]:
-  data = data.reset_index()  # make sure indexes pair with number of rows
+def get_all_transactions(data: List[NFTTransaction]):
+    hash = {}
 
-  transactions = []
-  for i, row in data.iterrows():
-    transactions.append(Query2Data  (
-        txn_hash=row['Txn Hash'], 
-        token_id=row['Token ID'],
-        quantity=row['Quantity'],
-        price=row['Price'],
-        avg=0
-        ))
-    
-  return transactions
+    for row in data:
+        if row.token_id in hash:
+            hash[row.token_id].append(row)
+        else:
+            hash[row.token_id] = [row]
 
+    return hash
 
-def get_dataframe(data):
-  txns_list = []
+def save_result(data: List[Query2Data], all_txns):
+    all_txns = get_all_transactions(all_txns)
 
+    with open("query1_out.txt", "w") as file:
+        for row in data:
+            file.writelines(f"{row.token_id} (frequency = {row.avg})\n")
+            file.writelines("Token ID,\t Txn hash,\t Date Time (UTC),\t Buyer,\t NFT,\t Type,\t Quantity,\t Price (USD)\n")
+            file.writelines("\n")
+            for value in all_txns[row.token_id]:
+                file.writelines(f"{value.token_id},\t\t {value.txn_hash},\t {value.date_time},\t {value.buyer},\t {value.nft},\t {value.type_},\t {value.quantity},\t {value.price}\n")
+
+            file.writelines("\n\n")
+
+def currency_converter(data: List[NFTTransaction]) -> List[NFTTransaction]:
   for row in data:
-    dic = {
-        'Txn Hash': row.txn_hash, 
-        'Token ID': row.token_id,
-        'Quantity': row.quantity,
-        'Price': row.price,
-    }
-    txns_list.append(dic)
-
-  df = pd.DataFrame.from_records(txns_list)
-  df.to_excel('query2_out.xlsx') 
-  return df
-
-  
-def currency_converter(data) -> list[Query2Data]:
-  data = prepare_data(data)
-
-  for row in data:
-    price = row.price
+    price = row.price_str
 
     if type(price) is not str:
       row.price = float(float(price) * 1.00)
@@ -253,6 +268,44 @@ def currency_converter(data) -> list[Query2Data]:
       None
       
   return data
+
+def prepare_data(data) -> List[NFTTransaction]:
+  data = data.reset_index()  # make sure indexes pair with number of rows
+
+  transactions = []
+  for i, row in data.iterrows():
+    transactions.append(NFTTransaction(
+        txn_hash=row['Txn Hash'], 
+        time_stamp=row['UnixTimestamp'],
+        date_time=row['Date Time (UTC)'],
+        action=row['Action'],
+        buyer=row['Buyer'],
+        nft=row['NFT'],
+        token_id=row['Token ID'],
+        type_=row['Type'],
+        quantity=row['Quantity'],
+        price_str=row['Price'],
+        price=0.0,
+        market=row['Market'],
+        n_unique_buyers=0))
+    
+  return transactions
+
+def get_dataframe(data):
+  txns_list = []
+
+  for row in data:
+    dic = {
+        'Txn Hash': row.txn_hash, 
+        'Token ID': row.token_id,
+        'Quantity': row.quantity,
+        'Price': row.price,
+    }
+    txns_list.append(dic)
+
+  df = pd.DataFrame.from_records(txns_list)
+  df.to_excel('query2_out.xlsx') 
+  return df
 
 def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_3.png", rows=92):
     x_axis = [i for i in range(rows)]

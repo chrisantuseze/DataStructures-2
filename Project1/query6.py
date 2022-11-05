@@ -4,6 +4,7 @@ from typing import List
 import matplotlib.pyplot as plt 
 import time
 from datetime import datetime
+import glob
 
 ##################################################### Data ###################################################
 from dataclasses import dataclass, field
@@ -32,7 +33,8 @@ class NFTTransaction:
     token_id: int
     type_: int
     quantity: int
-    price: str
+    price: float
+    price_str: str
     market: str
     n_unique_buyers: int
 
@@ -155,6 +157,83 @@ def max_by_fraudulent(A: List[Query6Data]) -> List[Query6Data]:
 
 ########################################## Utils #####################################################
 
+def get_all_transactions(data: List[NFTTransaction]):
+    hash = {}
+
+    for row in data:
+        if row.token_id in hash:
+            hash[row.token_id].append(row)
+        else:
+            hash[row.token_id] = [row]
+
+    return hash
+
+def save_result(data: List[Query6Data], all_txns):
+    all_txns = get_all_transactions(all_txns)
+
+    with open("query6_out.txt", "w") as file:
+        for row in data:
+            file.writelines(f"{row.token_id} (frequency (number of transactions = {row.n_txns}, number of unique buyers = {row.n_unique_buyers}, status = {row.fraudulent})\n")
+            file.writelines("Token ID,\t Txn hash,\t Date Time (UTC),\t Buyer,\t NFT,\t Type,\t Quantity,\t Price (USD)\n")
+            file.writelines("\n")
+            for value in all_txns[row.token_id]:
+                file.writelines(f"{value.token_id},\t\t {value.txn_hash},\t {value.date_time},\t {value.buyer},\t {value.nft},\t {value.type_},\t {value.quantity},\t {value.price}\n")
+
+            file.writelines("\n\n")
+
+def currency_converter(data: List[NFTTransaction]) -> List[NFTTransaction]:
+  for row in data:
+    price = row.price_str
+
+    if type(price) is not str:
+      row.price = float(float(price) * 1.00)
+      continue
+
+    try:
+      price, currency, _ = price.split(" ")
+      price = price.replace(",", "")
+
+      if currency == "ETH":
+        row.price = float(float(price) * 1309.97)
+      
+      elif currency == "WETH":
+        row.price = float(float(price) * 1322.16)
+
+      elif currency == "ASH":
+        row.price = float(float(price) * 0.9406)
+      
+      elif currency == "GALA":
+        row.price = float(float(price) * 0.03748)
+        
+      elif currency == "TATR":
+        row.price = float(float(price) * 0.012056)
+        
+      elif currency == "USDC":
+        row.price = float(float(price) * 1.00)
+        
+      elif currency == "MANA":
+        row.price = float(float(price) * 0.64205)
+        
+      elif currency == "SAND":
+        row.price = float(float(price) * 0.7919)
+        
+      elif currency == "RARI":
+        row.price = float(float(price) * 2.18)
+        
+      elif currency == "CTZN":
+        row.price = float(float(price) * 0.00321)
+        
+      elif currency == "APE":
+        row.price = float(float(price) * 4.62)
+
+      else:
+        row.price = float(float(price) * 1.00)
+
+    except ValueError:
+      None
+      
+  return data
+
 def prepare_data(data) -> List[NFTTransaction]:
   data = data.reset_index()  # make sure indexes pair with number of rows
 
@@ -170,7 +249,8 @@ def prepare_data(data) -> List[NFTTransaction]:
         token_id=row['Token ID'],
         type_=row['Type'],
         quantity=row['Quantity'],
-        price=row['Price'],
+        price_str=row['Price'],
+        price=0.0,
         market=row['Market'],
         n_unique_buyers=0))
     
@@ -317,8 +397,16 @@ def convert_string_to_ascii(input):
 ############################################ Main Program ######################################################
 
 def main():
-    data = pd.read_csv("full_dataset.csv")
+
+    # please replace this with the path where the dataset file is
+    files = glob.glob("/Users/chrisantuseze/VSCodeProjects/DataStructures 2/Project1/*.csv")
+
+    data = [pd.read_csv(f) for f in files]
+    data = pd.concat(data,ignore_index=True)
+    data = data.dropna()
+
     transactions = prepare_data(data)
+    transactions = currency_converter(transactions)
 
     elapsed_time_averages = []
     asymptotic_times = []
@@ -338,7 +426,7 @@ def main():
     plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=elapsed_time_averages, rows=rows)
 
     # This is used to print out the sorted records
-    # run_query(transactions, run=0)
+    # run_query(transactions, run=1)
 
 def run_n_times(transactions, n):
     elapsed_times = []
@@ -362,7 +450,9 @@ def run_query(transactions, run=1):
 
     elapsed_time = (end_time1 - start_time1)
 
-    if run == 0:
+    if run == 1:
+        save_result(sorted_txns, transactions)
+
         df = get_dataframe(sorted_txns)
         print(df.head(10))
 
