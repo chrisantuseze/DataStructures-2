@@ -24,8 +24,12 @@ def main():
         aveg_elapsed_time_ns = run_n_times(transactions[0: n], 100)
         elapsed_time_averages.append(aveg_elapsed_time_ns)
 
+        # this is used to ensure both the asymptotic and actual run time have the same scale
         n *= 5000
-        asymptotic_times.append(n * np.log10(n))
+
+        # we figured out that the buyer with the most number of nfts had 27 unique nfts, hence the exponent, k = 2
+        k = 2
+        asymptotic_times.append(n * k)
 
     plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=elapsed_time_averages)
 

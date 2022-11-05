@@ -3,7 +3,7 @@ import numpy as np
 import time
 from typing import List
 from query1_data import Query1Data, Query1Input
-from query1_utils import update_with_n_txns, get_dataframe, prepare_data
+from query1_utils import update_with_n_txns, get_dataframe, prepare_data, plot_graph
 from query1_radix_sort import radix_sort_by_n_txns
 from query1_merge_sort import merge_sort_by_ntxn
 
@@ -20,8 +20,12 @@ def main():
         aveg_elapsed_time_ns = run_n_times(transactions[0: n], 100)
         elapsed_time_averages.append(aveg_elapsed_time_ns)
 
+        # this is used to ensure both the asymptotic and actual run time have the same scale
         n *= 5000
-        asymptotic_times.append(n * np.log10(n))
+
+        # we figured out that the token with the most number of transactions had 1209 transactions, hence the exponent, k = 4
+        k = 4
+        asymptotic_times.append(n * k)
 
     plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=elapsed_time_averages)
 
@@ -44,7 +48,7 @@ def run_query(transactions, run=1):
     sorted_txns = sort_query1(transactions)
 
     start_time = time.time_ns()
-    # sorted_txns = radix_sort_by_n_txns(sorted_txns)
+    sorted_txns = radix_sort_by_n_txns(sorted_txns)
     # sorted_txns = merge_sort_by_ntxn(sorted_txns)
     end_time = time.time_ns()
 

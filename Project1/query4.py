@@ -25,8 +25,11 @@ def main():
         elapsed_time_averages.append(aveg_elapsed_time_ns)
 
         n *= 5000
-        asymptotic_times.append(n * np.log10(n))
-
+        
+        # we figured out that the token with the most number of buyers had 1201 unique buyers, hence the exponent, k = 4
+        k = 4
+        asymptotic_times.append(n * k)
+        
     plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=elapsed_time_averages)
 
     # This is used to print out the sorted records

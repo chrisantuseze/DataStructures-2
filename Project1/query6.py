@@ -20,6 +20,7 @@ def main():
         aveg_elapsed_time_ns = run_n_times(transactions[0: n], 100)
         elapsed_time_averages.append(aveg_elapsed_time_ns)
 
+        # this is used to ensure both the asymptotic and actual run time have the same scale
         n *= 5000
         asymptotic_times.append(n * np.log10(n))
 

@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from query2_data import Query3Data
+from query2_data import Query2Data
 import numpy as np
 from query2_merge_sort import mergeSort
 
@@ -36,21 +36,16 @@ def sort_by_avg_price(transactions):
   for key in hash:
     transactions_with_avg_price = np.concatenate((transactions_with_avg_price, hash[key]))
 
-  print(len(transactions_with_avg_price))
   mergeSort(transactions_with_avg_price, 0, len(transactions_with_avg_price)-1)
 
-  #for i in transactions_with_avg_price:
-   # print(i)
-    #print(count)
-    #print("------------")
   return transactions_with_avg_price
 
-def prepare_data(data) -> list[Query3Data]:
+def prepare_data(data) -> list[Query2Data]:
   data = data.reset_index()  # make sure indexes pair with number of rows
 
   transactions = []
   for i, row in data.iterrows():
-    transactions.append(Query3Data  (
+    transactions.append(Query2Data  (
         txn_hash=row['Txn Hash'], 
         token_id=row['Token ID'],
         quantity=row['Quantity'],
@@ -78,7 +73,7 @@ def get_dataframe(data):
   return df
 
   
-def currency_converter(data) -> list[Query3Data]:
+def currency_converter(data) -> list[Query2Data]:
   data = prepare_data(data)
 
   for row in data:
