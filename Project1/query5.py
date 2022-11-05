@@ -407,7 +407,7 @@ def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_5.png", row
 ############################################ Main Program ######################################################
 
 def main():
-    
+
     # please replace this with the path where the dataset file is
     files = glob.glob("/Users/chrisantuseze/VSCodeProjects/DataStructures 2/Project1/*.csv")
 
@@ -437,7 +437,6 @@ def main():
 
     plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=elapsed_time_averages, rows=rows)
 
-    # This is used to print out the sorted records
     # run_query(transactions, run=1)
 
 def run_n_times(transactions, n):
@@ -453,11 +452,10 @@ def run_n_times(transactions, n):
     return aveg_elapsed_time_ns
     
 def run_query(transactions, run=1):
-    sorted_txns = sort_query5(transactions)
+    data = process_data(transactions)
     
     start_time1 = time.time_ns()
-    sorted_txns = radix_sort_by_n_nft(sorted_txns)
-    # sorted_txns = merge_sort_by_n_nft(sorted_txns)
+    sorted_txns = radix_sort_by_n_nft(data)
     end_time1 = time.time_ns()
 
     start_time2 = time.time_ns()
@@ -472,11 +470,11 @@ def run_query(transactions, run=1):
         df = get_dataframe(sorted_txns)
         print(df.head(10))
 
-    # print(f"Run - {run} Sorting took {elapsed_time} nano secs ({elapsed_time/1e9} secs)")
+        print(f"Run - {run} Sorting took {elapsed_time} nano secs ({elapsed_time/1e9} secs)")
 
     return elapsed_time, sorted_txns
 
-def sort_query5(A: List[Query5Input]):
+def process_data(A: List[Query5Input]):
     hash = {}
     for row in A:
         if row.buyer in hash:

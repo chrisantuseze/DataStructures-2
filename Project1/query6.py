@@ -425,7 +425,6 @@ def main():
 
     plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=elapsed_time_averages, rows=rows)
 
-    # This is used to print out the sorted records
     # run_query(transactions, run=1)
 
 def run_n_times(transactions, n):
@@ -442,10 +441,10 @@ def run_n_times(transactions, n):
 
 
 def run_query(transactions, run=1):
-    sorted_txns = sort_query6(transactions)
+    data = process_data(transactions)
 
     start_time1 = time.time_ns()
-    sorted_txns = merge_sort_by_fraudulent(sorted_txns)
+    sorted_txns = merge_sort_by_fraudulent(data)
     end_time1 = time.time_ns()
 
     elapsed_time = (end_time1 - start_time1)
@@ -456,11 +455,11 @@ def run_query(transactions, run=1):
         df = get_dataframe(sorted_txns)
         print(df.head(10))
 
-    # print(f"Run - {run} Sorting took {elapsed_time} nano secs ({elapsed_time/1e9} secs)")
+        print(f"Run - {run} Sorting took {elapsed_time} nano secs ({elapsed_time/1e9} secs)")
 
     return elapsed_time, sorted_txns
 
-def sort_query6(A: List[NFTTransaction]):
+def process_data(A: List[NFTTransaction]):
     hash = {}
     for row in A:
         if row.token_id in hash:
