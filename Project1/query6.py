@@ -297,8 +297,8 @@ def hours_between(last_date, start_date):
   diff_in_hours = (t1 - t2).seconds/360
   return diff_in_hours
 
-def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_6.png"):
-    x_axis = [i for i in range(92)]
+def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_6.png", rows=92):
+    x_axis = [i for i in range(rows)]
     plt.plot(x_axis, asymptotic_runtimes, color ='red')
     plt.plot(x_axis, actual_runtimes, color ='blue')
     plt.xlabel("Transaction Batch (x1000)")
@@ -322,7 +322,9 @@ def main():
 
     elapsed_time_averages = []
     asymptotic_times = []
-    for i in range(int(len(transactions)/1000)):
+
+    rows = int(len(transactions)/1000)
+    for i in range(rows):
         print(f"{(i + 1) * 1000} transactions")
 
         n = (i + 1) * 1000
@@ -333,7 +335,7 @@ def main():
         n *= 5000
         asymptotic_times.append(n * np.log10(n))
 
-    plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=elapsed_time_averages)
+    plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=elapsed_time_averages, rows=rows)
 
     # This is used to print out the sorted records
     # run_query(transactions, run=0)
