@@ -31,11 +31,10 @@ class NFTTransaction:
     price: float
     price_str: str
     market: str
-    n_unique_buyers: int
 
-# #################################################### Merge sort ##############################################
+#################################################### Merge sort ##############################################
 
-# def merge(A, l, m, r):
+# def merge(arr, l, m, r):
 #     n1 = m - l + 1
 #     n2 = r - m
  
@@ -45,10 +44,10 @@ class NFTTransaction:
  
 #     # Copy data to temp arrays L[] and R[]
 #     for i in range(0, n1):
-#         L[i] = A[l + i]
+#         L[i] = arr[l + i]
  
 #     for j in range(0, n2):
-#         R[j] = A[m + 1 + j]
+#         R[j] = arr[m + 1 + j]
  
 #     # Merge the temp arrays back into arr[l..r]
 #     i = 0     # Initial index of first subarray
@@ -57,24 +56,24 @@ class NFTTransaction:
  
 #     while i < n1 and j < n2:
 #         if L[i].avg >= R[j].avg:
-#             A[k] = L[i]
+#             arr[k] = L[i]
 #             i += 1
 #         else:
-#             A[k] = R[j]
+#             arr[k] = R[j]
 #             j += 1
 #         k += 1
  
 #     # Copy the remaining elements of L[], if there
 #     # are any
 #     while i < n1:
-#         A[k] = L[i]
+#         arr[k] = L[i]
 #         i += 1
 #         k += 1
  
 #     # Copy the remaining elements of R[], if there
 #     # are any
 #     while j < n2:
-#         A[k] = R[j]
+#         arr[k] = R[j]
 #         j += 1
 #         k += 1
  
@@ -82,7 +81,7 @@ class NFTTransaction:
 # # sub-array of arr to be sorted
  
  
-# def merge_sort(A, l, r):
+# def merge_sort(arr, l, r):
 #     if l < r:
  
 #         # Same as (l+r)//2, but avoids overflow for
@@ -90,11 +89,10 @@ class NFTTransaction:
 #         m = l+(r-l)//2
  
 #         # Sort first and second halves
-#         merge_sort(A, l, m)
-#         merge_sort(A, m+1, r)
-#         merge(A, l, m, r)
+#         merge_sort(arr, l, m)
+#         merge_sort(arr, m+1, r)
+#         merge(arr, l, m, r)
 
-#################################################### Merge sort ##############################################
 def merge_sort(A: List[Query2Data]):
     if len(A) == 1:
         return A
@@ -121,6 +119,7 @@ def merge_by_ntxn(L: List[Query2Data], R: List[Query2Data]):
 
     return B
 
+
 ############################################ Main Program ######################################################
 
 def main():
@@ -142,7 +141,7 @@ def main():
         print(f"{(i + 1) * 1000} transactions")
 
         n = (i + 1) * 1000
-        aveg_elapsed_time_ns = run_n_times(transactions[0: n], 100)
+        aveg_elapsed_time_ns = run_n_times(transactions[0: n], 1)
         elapsed_time_averages.append(aveg_elapsed_time_ns)
 
         # this is used to ensure both the asymptotic and actual run time have the same scale
@@ -170,6 +169,7 @@ def run_query(transactions, run=1):
     data = process_data(transactions)
 
     start_time = time.time_ns()
+    # merge_sort(sorted_txns, 0, len(sorted_txns)-1)
     sorted_txns = merge_sort(data)
     end_time = time.time_ns()
 
@@ -234,7 +234,7 @@ def save_result(data: List[Query2Data], all_txns):
 
     with open("query2_out.txt", "w") as file:
         for row in data:
-            file.writelines(f"{row.token_id} (frequency = {row.avg})\n")
+            file.writelines(f"{row.token_id} (average = {row.avg})\n")
             file.writelines("Token ID,\t Txn hash,\t Date Time (UTC),\t Buyer,\t NFT,\t Type,\t Quantity,\t Price (USD)\n")
             file.writelines("\n")
             for value in all_txns[row.token_id]:
@@ -312,8 +312,7 @@ def prepare_data(data) -> List[NFTTransaction]:
         quantity=row['Quantity'],
         price_str=row['Price'],
         price=0.0,
-        market=row['Market'],
-        n_unique_buyers=0))
+        market=row['Market']))
     
   return transactions
 
@@ -333,7 +332,7 @@ def get_dataframe(data):
   df.to_excel('query2_out.xlsx') 
   return df
 
-def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_3.png", rows=92):
+def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_2.png", rows=92):
     x_axis = [i for i in range(rows)]
     plt.plot(x_axis, asymptotic_runtimes, color ='red')
     plt.plot(x_axis, actual_runtimes, color ='blue')
