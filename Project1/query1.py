@@ -15,11 +15,6 @@ class Query1Data:
     n_txns: int
 
 @dataclass(order=True)
-class Query1Input:
-    txn_hash: str
-    token_id: int
-
-@dataclass(order=True)
 class NFTTransaction:
     txn_hash: str
     time_stamp: str
@@ -238,7 +233,6 @@ def get_dataframe(data: List[Query1Data]):
     txns_list.append(dic)
 
   df = pd.DataFrame.from_records(txns_list)
-  df.to_excel('query1_out.xlsx') 
   return df
 
 def update_with_n_txns(sorted_txns: List[NFTTransaction]) -> List[Query1Data]:
@@ -315,7 +309,6 @@ def main():
 
     plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=elapsed_time_averages, rows=rows)
 
-    # This is used to print out the sorted records
     # run_query(transactions, run=1)
 
 def run_n_times(transactions, n):
@@ -331,11 +324,10 @@ def run_n_times(transactions, n):
     return aveg_elapsed_time_ns
 
 def run_query(transactions, run=1):
-    sorted_txns = sort_query1(transactions)
+    data = process_data(transactions)
 
     start_time = time.time_ns()
-    sorted_txns = radix_sort_by_n_txns(sorted_txns)
-    # sorted_txns = merge_sort_by_ntxn(sorted_txns)
+    sorted_txns = radix_sort_by_n_txns(data)
     end_time = time.time_ns()
 
     elapsed_time = (end_time - start_time)
@@ -346,11 +338,12 @@ def run_query(transactions, run=1):
         df = get_dataframe(sorted_txns)
         print(df.head(10))
 
-    # print(f"Run - {run} Sorting took {elapsed_time} nano secs ({elapsed_time/1e9} secs)")
+        print(f"Run - {run} Sorting took {elapsed_time} nano secs ({elapsed_time/1e9} secs)")
+
 
     return elapsed_time, sorted_txns
 
-def sort_query1(A: List[NFTTransaction]) -> List[Query1Data]:
+def process_data(A: List[NFTTransaction]) -> List[Query1Data]:
     hash = {}
     for row in A:
         if row.token_id in hash:

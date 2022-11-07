@@ -31,68 +31,94 @@ class NFTTransaction:
     price: float
     price_str: str
     market: str
-    n_unique_buyers: int
 
 #################################################### Merge sort ##############################################
 
-def merge(A, l, m, r):
-    n1 = m - l + 1
-    n2 = r - m
+# def merge(arr, l, m, r):
+#     n1 = m - l + 1
+#     n2 = r - m
  
-    # create temp arrays
-    L = [0] * (n1)
-    R = [0] * (n2)
+#     # create temp arrays
+#     L = [0] * (n1)
+#     R = [0] * (n2)
  
-    # Copy data to temp arrays L[] and R[]
-    for i in range(0, n1):
-        L[i] = A[l + i]
+#     # Copy data to temp arrays L[] and R[]
+#     for i in range(0, n1):
+#         L[i] = arr[l + i]
  
-    for j in range(0, n2):
-        R[j] = A[m + 1 + j]
+#     for j in range(0, n2):
+#         R[j] = arr[m + 1 + j]
  
-    # Merge the temp arrays back into arr[l..r]
-    i = 0     # Initial index of first subarray
-    j = 0     # Initial index of second subarray
-    k = l     # Initial index of merged subarray
+#     # Merge the temp arrays back into arr[l..r]
+#     i = 0     # Initial index of first subarray
+#     j = 0     # Initial index of second subarray
+#     k = l     # Initial index of merged subarray
  
-    while i < n1 and j < n2:
-        if L[i].avg >= R[j].avg:
-            A[k] = L[i]
-            i += 1
+#     while i < n1 and j < n2:
+#         if L[i].avg >= R[j].avg:
+#             arr[k] = L[i]
+#             i += 1
+#         else:
+#             arr[k] = R[j]
+#             j += 1
+#         k += 1
+ 
+#     # Copy the remaining elements of L[], if there
+#     # are any
+#     while i < n1:
+#         arr[k] = L[i]
+#         i += 1
+#         k += 1
+ 
+#     # Copy the remaining elements of R[], if there
+#     # are any
+#     while j < n2:
+#         arr[k] = R[j]
+#         j += 1
+#         k += 1
+ 
+# # l is for left index and r is right index of the
+# # sub-array of arr to be sorted
+ 
+ 
+# def merge_sort(arr, l, r):
+#     if l < r:
+ 
+#         # Same as (l+r)//2, but avoids overflow for
+#         # large l and h
+#         m = l+(r-l)//2
+ 
+#         # Sort first and second halves
+#         merge_sort(arr, l, m)
+#         merge_sort(arr, m+1, r)
+#         merge(arr, l, m, r)
+
+def merge_sort(A: List[Query2Data]):
+    if len(A) == 1:
+        return A
+
+    q = int(len(A)/2)
+    B = A[:q]
+    C = A[q:]
+
+    L = merge_sort(B)
+    R = merge_sort(C)
+    return merge_by_ntxn(L, R)
+
+def merge_by_ntxn(L: List[Query2Data], R: List[Query2Data]):
+    n = len(L) + len(R)
+    i = j = 0
+    B = []
+    for k in range(0, n):
+        if j >= len(R) or (i < len(L) and L[i].avg >= R[j].avg):
+            B.append(L[i])
+            i = i + 1
         else:
-            A[k] = R[j]
-            j += 1
-        k += 1
- 
-    # Copy the remaining elements of L[], if there
-    # are any
-    while i < n1:
-        A[k] = L[i]
-        i += 1
-        k += 1
- 
-    # Copy the remaining elements of R[], if there
-    # are any
-    while j < n2:
-        A[k] = R[j]
-        j += 1
-        k += 1
- 
-# l is for left index and r is right index of the
-# sub-array of arr to be sorted
- 
- 
-def merge_sort(A, l, r):
-    if l < r:
- 
-        # Same as (l+r)//2, but avoids overflow for
-        # large l and h
-        m = l+(r-l)//2
- 
-        # Sort first and second halves
-        merge_sort(A, l, m)
-        merge_sort(A, m+1, r)
-        merge(A, l, m, r)
+            B.append(R[j])
+            j = j + 1
+
+    return B
+
 
 ############################################ Main Program ######################################################
 
@@ -115,7 +141,7 @@ def main():
         print(f"{(i + 1) * 1000} transactions")
 
         n = (i + 1) * 1000
-        aveg_elapsed_time_ns = run_n_times(transactions[0: n], 100)
+        aveg_elapsed_time_ns = run_n_times(transactions[0: n], 1)
         elapsed_time_averages.append(aveg_elapsed_time_ns)
 
         # this is used to ensure both the asymptotic and actual run time have the same scale
@@ -125,7 +151,6 @@ def main():
 
     plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=elapsed_time_averages, rows=rows)
 
-    # This is used to print out the sorted records
     # run_query(transactions, run=1)
 
 def run_n_times(transactions, n):
@@ -141,24 +166,24 @@ def run_n_times(transactions, n):
     return aveg_elapsed_time_ns
 
 def run_query(transactions, run=1):
+    data = process_data(transactions)
+
     start_time = time.time_ns()
-    sorted_txns = sort_by_avg_price(transactions)
+    # merge_sort(sorted_txns, 0, len(sorted_txns)-1)
+    sorted_txns = merge_sort(data)
     end_time = time.time_ns()
 
     elapsed_time = end_time - start_time
 
     if run == 1:
-        save_result(sorted_txns, transactions)
-
-        df = get_dataframe(sorted_txns)
-        print(df.head(10))
-
-    # print(f"Run - {run} Sorting took {elapsed_time} nano secs ({elapsed_time/1e9} secs)")
+        save_result(sorted_txns, transactions, elapsed_time)
+        
+        print(f"Run - {run} Sorting took {elapsed_time} nano secs ({elapsed_time/1e9} secs)")
 
     return elapsed_time, sorted_txns
 
 ########################################## Utils #####################################################
-def sort_by_avg_price(transactions):
+def process_data(transactions):
   hash = {}
 
   for item in transactions:
@@ -188,8 +213,6 @@ def sort_by_avg_price(transactions):
   for key in hash:
     transactions_with_avg_price = np.concatenate((transactions_with_avg_price, hash[key]))
 
-  merge_sort(transactions_with_avg_price, 0, len(transactions_with_avg_price)-1)
-
   return transactions_with_avg_price
 
 def get_all_transactions(data: List[NFTTransaction]):
@@ -203,12 +226,14 @@ def get_all_transactions(data: List[NFTTransaction]):
 
     return hash
 
-def save_result(data: List[Query2Data], all_txns):
+def save_result(data: List[Query2Data], all_txns, elapsed_time):
     all_txns = get_all_transactions(all_txns)
 
-    with open("query1_out.txt", "w") as file:
+    with open("query2_out.txt", "w") as file:
+        file.writelines(f"The execution time is {elapsed_time} nano secs\n")
+
         for row in data:
-            file.writelines(f"{row.token_id} (frequency = {row.avg})\n")
+            file.writelines(f"{row.token_id} (average = {row.avg})\n")
             file.writelines("Token ID,\t Txn hash,\t Date Time (UTC),\t Buyer,\t NFT,\t Type,\t Quantity,\t Price (USD)\n")
             file.writelines("\n")
             for value in all_txns[row.token_id]:
@@ -286,8 +311,7 @@ def prepare_data(data) -> List[NFTTransaction]:
         quantity=row['Quantity'],
         price_str=row['Price'],
         price=0.0,
-        market=row['Market'],
-        n_unique_buyers=0))
+        market=row['Market']))
     
   return transactions
 
@@ -304,10 +328,9 @@ def get_dataframe(data):
     txns_list.append(dic)
 
   df = pd.DataFrame.from_records(txns_list)
-  df.to_excel('query2_out.xlsx') 
   return df
 
-def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_3.png", rows=92):
+def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_2.png", rows=92):
     x_axis = [i for i in range(rows)]
     plt.plot(x_axis, asymptotic_runtimes, color ='red')
     plt.plot(x_axis, actual_runtimes, color ='blue')

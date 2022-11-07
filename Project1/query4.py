@@ -4,6 +4,7 @@ from typing import List
 import matplotlib.pyplot as plt 
 import time
 import glob
+import os
 
 ##################################################### Data ###################################################
 from dataclasses import dataclass
@@ -170,7 +171,7 @@ def get_all_transactions(data: List[NFTTransaction]):
 def save_result(data: List[Query4Data], all_txns):
     all_txns = get_all_transactions(all_txns)
 
-    with open("query4_out.txt", "w") as file:
+    with open(output_path + "/query4_out.txt", "w") as file:
         for row in data:
             file.writelines(f"{row.token_id} (frequency = {row.n_unique_buyers})\n")
             file.writelines("Token ID,\t Txn hash,\t Date Time (UTC),\t Buyer,\t NFT,\t Type,\t Quantity,\t Price (USD)\n")
@@ -266,7 +267,6 @@ def get_dataframe(data: List[Query4Data]):
     txns_list.append(dic)
 
   df = pd.DataFrame.from_records(txns_list)
-  df.to_excel('query4_out.xlsx') 
   return df
 
 def update_with_n_unique_buyers(sorted_txns: List[Query4Input]) -> List[Query4Data]:
@@ -314,11 +314,12 @@ def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_4.png", row
 def main():
 
     # please replace this with the path where the dataset file is
-    files = glob.glob("/Users/chrisantuseze/VSCodeProjects/DataStructures 2/Project1/*.csv")
+    files = glob.glob(root_path + "/*.csv")
 
     data = [pd.read_csv(f) for f in files]
     data = pd.concat(data,ignore_index=True)
     data = data.dropna()
+    data = data.drop_duplicates()
 
     transactions = prepare_data(data)
     transactions = currency_converter(transactions)
@@ -330,7 +331,7 @@ def main():
         print(f"{(i + 1) * 1000} transactions")
 
         n = (i + 1) * 1000
-        aveg_elapsed_time_ns = run_n_times(transactions[0: n], 100)
+        aveg_elapsed_time_ns = run_n_times(transactions[0: n], no_of_runs)
         elapsed_time_averages.append(aveg_elapsed_time_ns)
 
         n *= 5000
@@ -339,9 +340,8 @@ def main():
         k = 4
         asymptotic_times.append(n * k)
         
-    plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=elapsed_time_averages, rows=rows)
+    plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=elapsed_time_averages,filename=output_path+"/"+"query_4.png", rows=rows)
 
-    # This is used to print out the sorted records
     # run_query(transactions, run=1)
 
 def run_n_times(transactions, n):
@@ -358,12 +358,10 @@ def run_n_times(transactions, n):
 
 
 def run_query(transactions, run=1):
-    sorted_txns = sort_query4(transactions)
+    data = process_data(transactions)
 
     start_time = time.time_ns()
-    # sorted_txns = timsort(sorted_txns)
-    sorted_txns = radix_sort_by_nbuyer(sorted_txns)
-    # sorted_txns = merge_sort_by_nbuyer(sorted_txns)
+    sorted_txns = radix_sort_by_nbuyer(data)
     end_time = time.time_ns()
 
     elapsed_time = (end_time - start_time)
@@ -371,14 +369,14 @@ def run_query(transactions, run=1):
     if run == 1:
         save_result(sorted_txns, transactions)
 
-        df = get_dataframe(sorted_txns)
-        print(df.head(10))
+        # df = get_dataframe(sorted_txns)
+        # print(df.head(10))
 
-    # print(f"Run - {run} Sorting took {elapsed_time} nano secs ({elapsed_time/1e9} secs)")
+    print(f"Run - {run} Sorting took {elapsed_time} nano secs ({elapsed_time/1e9} secs)")
 
     return elapsed_time, sorted_txns
 
-def sort_query4(A: List[Query4Input]) -> List[Query4Data]:
+def process_data(A: List[Query4Input]) -> List[Query4Data]:
     hash = {}
     for row in A:
         if row.token_id in hash:
@@ -394,4 +392,18 @@ def sort_query4(A: List[Query4Input]) -> List[Query4Data]:
     return A
 
 if __name__ == "__main__":
+    global root_path
+    root_path = os.getcwd()
+    
+    print("Kindly specify the number of runs needed (suggested runs is 1), Example : 1")
+    global no_of_rows
+    no_of_runs = int(input())
+    
+    global output_path
+    output_path = root_path + "/output"
+    
+    if not os.path.isdir(output_path):
+        os.mkdir(output_path)
+        
+
     main()

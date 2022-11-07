@@ -1,26 +1,19 @@
 import pandas as pd 
 import numpy as np
-from typing import List
-import matplotlib.pyplot as plt 
-import time
-from datetime import datetime
 import glob
+import time
+from typing import Dict, List
+from datetime import datetime
+import matplotlib.pyplot as plt 
 
 ##################################################### Data ###################################################
 from dataclasses import dataclass, field
 
 @dataclass(order=True)
-class Query6Data:
-    first_buy_date: str
-    last_buy_date: str
-    second_last_buy_date: str
-    third_last_buy_date: str
-    # nft: str
-    token_id: int
+class Query3Data:
+    buyer: str
+    buyer_int: int
     n_txns: int
-    n_unique_buyers: int
-    fraudulent: str
-    fraudulent_ascii: int
 
 @dataclass(order=True)
 class NFTTransaction:
@@ -29,6 +22,7 @@ class NFTTransaction:
     date_time: str
     action: str
     buyer: str
+    buyer_int: int
     nft: str
     token_id: int
     type_: int
@@ -39,7 +33,7 @@ class NFTTransaction:
     n_unique_buyers: int
 
 #################################################### Merge sort ##############################################
-def merge_sort_by_ntxn(A: List[Query6Data]):
+def merge_sort_by_ntxn(A: List[Query3Data]):
     if len(A) == 1:
         return A
 
@@ -51,7 +45,7 @@ def merge_sort_by_ntxn(A: List[Query6Data]):
     R = merge_sort_by_ntxn(C)
     return merge_by_ntxn(L, R)
 
-def merge_by_ntxn(L: List[Query6Data], R: List[Query6Data]):
+def merge_by_ntxn(L: List[Query3Data], R: List[Query3Data]):
     n = len(L) + len(R)
     i = j = 0
     B = []
@@ -65,35 +59,9 @@ def merge_by_ntxn(L: List[Query6Data], R: List[Query6Data]):
 
     return B
 
-def merge_sort_by_fraudulent(A: List[Query6Data]) -> List[Query6Data]:
-    if len(A) == 1:
-        return A
-
-    q = int(len(A)/2)
-    B = A[:q]
-    C = A[q:]
-
-    L = merge_sort_by_fraudulent(B)
-    R = merge_sort_by_fraudulent(C)
-    return merge_by_fraudulent(L, R)
-
-def merge_by_fraudulent(L: List[Query6Data], R: List[Query6Data]) -> List[Query6Data]:
-    n = len(L) + len(R)
-    i = j = 0
-    B = []
-    for k in range(0, n):
-        if j >= len(R) or (i < len(L) and ((L[i].fraudulent_ascii) >= (R[j].fraudulent_ascii))):
-            B.append(L[i])
-            i = i + 1
-        else:
-            B.append(R[j])
-            j = j + 1
-
-    return B
-
 #################################################### Radix sort ##############################################
 
-def counting_sort_by_fraudulent(A: List[Query6Data], exp) -> List[Query6Data]:
+def counting_sort_by_n_txns(A: List[Query3Data], exp) -> List[Query3Data]:
     n = len(A)
  
     # The output array elements that will have sorted arr
@@ -104,7 +72,7 @@ def counting_sort_by_fraudulent(A: List[Query6Data], exp) -> List[Query6Data]:
  
     # Store count of occurrences in count[]
     for i in range(0, n):
-        index = int(A[i].fraudulent_ascii) // exp
+        index = int(A[i].n_txns) // exp
         index = int(index)
 
         count[index % 10] += 1
@@ -117,7 +85,7 @@ def counting_sort_by_fraudulent(A: List[Query6Data], exp) -> List[Query6Data]:
     # Build the output array
     i = n - 1
     while i >= 0:
-        index = int(A[i].fraudulent_ascii) // exp
+        index = int(A[i].n_txns) // exp
         index = int(index)
 
         output[count[index % 10] - 1] = A[i]
@@ -127,16 +95,16 @@ def counting_sort_by_fraudulent(A: List[Query6Data], exp) -> List[Query6Data]:
     return output
  
 # Method to do Radix Sort
-def radix_sort_by_fraudulent(A: List[Query6Data]) -> List[Query6Data]:
+def radix_sort_by_n_txns(A: List[Query3Data]) -> List[Query3Data]:
     # Find the maximum number to know number of digits
-    max1 = max_by_fraudulent(A)
+    max1 = max_by_n_txns(A)
  
     # Do counting sort for every digit. Note that instead
     # of passing digit number, exp is passed. exp is 10^i
     # where i is current digit number
     exp = 1
     while max1 / exp >= 1:
-        A = counting_sort_by_fraudulent(A, exp)
+        A = counting_sort_by_n_txns(A, exp)
         exp *= 10
 
     B = []
@@ -146,12 +114,12 @@ def radix_sort_by_fraudulent(A: List[Query6Data]) -> List[Query6Data]:
 
     return B
 
-def max_by_fraudulent(A: List[Query6Data]) -> List[Query6Data]:
+def max_by_n_txns(A: List[Query3Data]) -> List[Query3Data]:
     max = 0
     for value in A:
-        fraudulent_ascii = int(value.fraudulent_ascii)
-        if  fraudulent_ascii > max:
-            max = fraudulent_ascii
+        n_txns = int(value.n_txns)
+        if  n_txns > max:
+            max = n_txns
 
     return max
 
@@ -161,23 +129,23 @@ def get_all_transactions(data: List[NFTTransaction]):
     hash = {}
 
     for row in data:
-        if row.token_id in hash:
-            hash[row.token_id].append(row)
+        if row.buyer_int in hash:
+            hash[row.buyer_int].append(row)
         else:
-            hash[row.token_id] = [row]
+            hash[row.buyer_int] = [row]
 
     return hash
 
-def save_result(data: List[Query6Data], all_txns):
+def save_result(data: List[Query3Data], all_txns):
     all_txns = get_all_transactions(all_txns)
 
-    with open("query6_out.txt", "w") as file:
+    with open("query3_out.txt", "w") as file:
         for row in data:
-            file.writelines(f"{row.token_id} (frequency (number of transactions = {row.n_txns}, number of unique buyers = {row.n_unique_buyers}, status = {row.fraudulent})\n")
-            file.writelines("Token ID,\t Txn hash,\t Date Time (UTC),\t Buyer,\t NFT,\t Type,\t Quantity,\t Price (USD)\n")
+            file.writelines(f"{row.buyer} (frequency = {row.n_txns})\n")
+            file.writelines("Buyer,\t Txn hash,\t Date Time (UTC),\t Buyer,\t NFT,\t Type,\t Quantity,\t Price (USD)\n")
             file.writelines("\n")
-            for value in all_txns[row.token_id]:
-                file.writelines(f"{value.token_id},\t\t {value.txn_hash},\t {value.date_time},\t {value.buyer},\t {value.nft},\t {value.type_},\t {value.quantity},\t {value.price}\n")
+            for value in all_txns[row.buyer_int]:
+                file.writelines(f"{value.buyer},\t {value.txn_hash},\t {value.date_time},\t {value.nft},\t {value.type_},\t {value.quantity},\t {value.price}\n")
 
             file.writelines("\n\n")
 
@@ -239,12 +207,15 @@ def prepare_data(data) -> List[NFTTransaction]:
 
   transactions = []
   for i, row in data.iterrows():
+    buyer_int = convert_string_to_ascii(row['Buyer'])
+
     transactions.append(NFTTransaction(
         txn_hash=row['Txn Hash'], 
         time_stamp=row['UnixTimestamp'],
         date_time=row['Date Time (UTC)'],
         action=row['Action'],
         buyer=row['Buyer'],
+        buyer_int=buyer_int,
         nft=row['NFT'],
         token_id=row['Token ID'],
         type_=row['Type'],
@@ -256,127 +227,43 @@ def prepare_data(data) -> List[NFTTransaction]:
     
   return transactions
 
-def get_dataframe(data: List[Query6Data]):
+def get_dataframe(data: List[Query3Data]):
   txns_list = []
 
   for row in data:
     dic = {
-        'First Buy Time': row.first_buy_date, 
-        'Last Buy Time': row.last_buy_date,
-        'Second Last Buy Time': row.second_last_buy_date,
-        'Third Last Buy Time': row.third_last_buy_date,
-        'Token ID': row.token_id,
-        'Number of Txns': row.n_txns,
-        'Number of Unique Buyers': row.n_unique_buyers,
-        'Fraudulent': row.fraudulent,
+        'Buyer': row.buyer,
+        'Number of Transactions': row.n_txns,
     }
     txns_list.append(dic)
 
   df = pd.DataFrame.from_records(txns_list)
   return df
 
-def update_with_n_unique_txns(sorted_txns: List[NFTTransaction]) -> List[Query6Data]:
-  # Lets sort the token ids by the number of txns
-  unique_txn_count = 0
-  unique_txns = []
-
-  unique_buyer_count = 0
-  unique_buyers = []
+def update_with_n_txns(sorted_txns: List[NFTTransaction]) -> List[Query3Data]:
+  # Lets sort the token ids by the number of unique buyers
+  count = 0
   n = len(sorted_txns)
+
+  new_txns = []
   
-  new_txns_list = []
-
-  first_buy_date = ""
-  last_buy_date = ""
   for i, row in enumerate(sorted_txns):
-      if i == 0:
-        first_buy_date = sorted_txns[i].date_time
+      count += 1
 
-      if row.txn_hash not in unique_txns:
-          unique_txn_count += 1
-          unique_txns.append(row.txn_hash)
-
-      if row.buyer not in unique_buyers:
-          unique_buyer_count += 1
-          unique_buyers.append(row.buyer)
-
-
+      # This is for the scenario when the transaction is the last in the array (spreadsheet)
       if i == n - 1:
-          last_buy_date = sorted_txns[i].date_time
+          data = Query3Data(buyer=sorted_txns[i].buyer, buyer_int=sorted_txns[i].buyer_int, n_txns=count)
+          new_txns.append(data)
 
-          second_last_buy_date = None
-          if sorted_txns[i].token_id == sorted_txns[i-1].token_id:
-            second_last_buy_date = sorted_txns[i-1].date_time
+      elif sorted_txns[i].buyer_int != sorted_txns[i+1].buyer_int:
+          data = Query3Data(buyer=sorted_txns[i].buyer, buyer_int=sorted_txns[i].buyer_int, n_txns=count)
+          new_txns.append(data)
 
-          third_last_buy_date = None
-          if sorted_txns[i].token_id == sorted_txns[i-2].token_id:
-            third_last_buy_date = sorted_txns[i-2].date_time
+          count = 0
 
-          new_txns_list.append(get_txn(first_buy_date, last_buy_date, second_last_buy_date, third_last_buy_date, sorted_txns[i].token_id, unique_txn_count, unique_buyer_count))
-          
-      elif sorted_txns[i].token_id != sorted_txns[i+1].token_id:
-          last_buy_date = sorted_txns[i].date_time
+  return new_txns
 
-          second_last_buy_date = None
-          if sorted_txns[i].token_id == sorted_txns[i-1].token_id:
-            second_last_buy_date = sorted_txns[i-1].date_time
-
-          third_last_buy_date = None
-          if sorted_txns[i].token_id == sorted_txns[i-2].token_id:
-            third_last_buy_date = sorted_txns[i-2].date_time
-
-          new_txns_list.append(get_txn(first_buy_date, last_buy_date, second_last_buy_date, third_last_buy_date, sorted_txns[i].token_id, unique_txn_count, unique_buyer_count))
-          
-          unique_txn_count = 0
-          unique_txns = []
-
-          unique_buyer_count = 0
-          unique_buyers = []
-
-          first_buy_date = sorted_txns[i+1].date_time
-
-  return new_txns_list
-
-def get_txn(first_buy_date, last_buy_date, second_last_buy_date, third_last_buy_date, tokenid, n_txns, n_buyers):
-  fraudulent = "No"
-  interval_threshold_hr = 1
-  ntxn_nbuyer_ratio = 1.8
-
-  if float(n_txns/n_buyers) > ntxn_nbuyer_ratio and (
-    hours_between(last_buy_date, first_buy_date) <= interval_threshold_hr or 
-    hours_between(second_last_buy_date, first_buy_date) <= interval_threshold_hr or 
-    hours_between(third_last_buy_date, first_buy_date) <= interval_threshold_hr
-    ):
-
-    fraudulent = "Yes"
-
-  elif n_txns < n_buyers:
-      fraudulent = "Suspicious"
-
-  return Query6Data (
-      first_buy_date=first_buy_date, 
-      last_buy_date=last_buy_date, 
-      second_last_buy_date=second_last_buy_date,
-      third_last_buy_date=third_last_buy_date,
-      token_id=tokenid, 
-      n_txns=n_txns, 
-      n_unique_buyers=n_buyers, 
-      fraudulent=fraudulent,
-      fraudulent_ascii=convert_string_to_ascii(fraudulent)
-    )
-
-def hours_between(last_date, start_date):
-  last_date = str(last_date)
-  start_date = str(start_date)
-
-  f = "%m/%d/%y %H:%M"
-  t1 = datetime.strptime(last_date, f)
-  t2 = datetime.strptime(start_date, f)
-
-  diff_in_hours = (t1 - t2).seconds/360
-  return diff_in_hours
-
-def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_6.png", rows=92):
+def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_3.png", rows=92):
     x_axis = [i for i in range(rows)]
     plt.plot(x_axis, asymptotic_runtimes, color ='red')
     plt.plot(x_axis, actual_runtimes, color ='blue')
@@ -415,12 +302,15 @@ def main():
         print(f"{(i + 1) * 1000} transactions")
 
         n = (i + 1) * 1000
-        aveg_elapsed_time_ns = run_n_times(transactions[0: n], 100)
+        aveg_elapsed_time_ns = run_n_times(transactions[0: n], 1)
         elapsed_time_averages.append(aveg_elapsed_time_ns)
 
         # this is used to ensure both the asymptotic and actual run time have the same scale
         n *= 5000
-        asymptotic_times.append(n * np.log10(n))
+
+        # we figured out that the token with the most number of transactions had 1209 transactions, hence the exponent, k = 4
+        k = 3
+        asymptotic_times.append(n * k)
 
     plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=elapsed_time_averages, rows=rows)
 
@@ -438,15 +328,14 @@ def run_n_times(transactions, n):
 
     return aveg_elapsed_time_ns
 
-
 def run_query(transactions, run=1):
     data = process_data(transactions)
 
-    start_time1 = time.time_ns()
-    sorted_txns = merge_sort_by_fraudulent(data)
-    end_time1 = time.time_ns()
+    start_time = time.time_ns()
+    sorted_txns = radix_sort_by_n_txns(data)
+    end_time = time.time_ns()
 
-    elapsed_time = (end_time1 - start_time1)
+    elapsed_time = (end_time - start_time)
 
     if run == 1:
         save_result(sorted_txns, transactions)
@@ -456,21 +345,22 @@ def run_query(transactions, run=1):
 
         print(f"Run - {run} Sorting took {elapsed_time} nano secs ({elapsed_time/1e9} secs)")
 
+
     return elapsed_time, sorted_txns
 
-def process_data(A: List[NFTTransaction]):
+def process_data(A: List[NFTTransaction]) -> List[Query3Data]:
     hash = {}
     for row in A:
-        if row.token_id in hash:
-            hash[row.token_id].append(row)
+        if row.buyer_int in hash:
+            hash[row.buyer_int].append(row)
         else:
-            hash[row.token_id] = [row]
+            hash[row.buyer_int] = [row]
         
     transactions = []
     for key in hash:
         transactions = np.concatenate((transactions, hash[key]))
 
-    A = update_with_n_unique_txns(transactions)
+    A = update_with_n_txns(transactions)
     return A
 
 if __name__ == "__main__":
