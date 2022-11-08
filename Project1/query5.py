@@ -1,9 +1,11 @@
-import pandas as pd 
+# imports
+import pandas as pd
 import numpy as np
 from typing import List
 import matplotlib.pyplot as plt 
 import time
 import glob
+import os
 
 ##################################################### Data ###################################################
 
@@ -38,34 +40,6 @@ class NFTTransaction:
     price_str: str
     market: str
     n_unique_buyers: int
-
-#################################################### Merge sort ##############################################
-
-def merge_sort_by_n_nft(A: List[Query5Data]) -> List[Query5Data]:
-    if len(A) == 1:
-        return A
-
-    q = int(len(A)/2)
-    B = A[:q]
-    C = A[q:]
-
-    L = merge_sort_by_n_nft(B)
-    R = merge_sort_by_n_nft(C)
-    return merge_by_n_nft(L, R)
-
-def merge_by_n_nft(L: List[Query5Data], R: List[Query5Data]) -> List[Query5Data]:
-    n = len(L) + len(R)
-    i = j = 0
-    B = []
-    for k in range(0, n):
-        if j >= len(R) or (i < len(L) and (( L[i].total_unique_nft ) >= ( R[j].total_unique_nft ))):
-            B.append(L[i])
-            i = i + 1
-        else:
-            B.append(R[j])
-            j = j + 1
-
-    return B
 
 def aux_sort_by_txns(A: List[Query5Data]) -> List[Query5Data]:
     for i in range(1, len(A)):
@@ -193,7 +167,7 @@ def get_all_transactions(data: List[NFTTransaction]):
 def save_result(data: List[Query5Data], all_txns):
     all_txns = get_all_transactions(all_txns)
 
-    with open("query5_out.txt", "w") as file:
+    with open(output_path + "/query5_out.txt", "w") as file:
         for row in data:
             file.writelines(f"{row.buyer} (frequency (unique NFTs = {row.total_unique_nft}, total NFTs = {row.total_txns})\n")
             file.writelines("Token ID,\t Txn hash,\t Date Time (UTC),\t Buyer,\t NFT,\t Type,\t Quantity,\t Price (USD)\n")
@@ -389,13 +363,13 @@ def update_with_n_unique_nfts_without_nft_names(sorted_txns: List[Query5Input]) 
 
 
 def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_5.png", rows=92):
-  x_axis = [i for i in range(rows)]
+  x_axis = [i for i in range(rows+1)]
   plt.plot(x_axis, asymptotic_runtimes, color ='red')
   plt.plot(x_axis, actual_runtimes, color ='blue')
   plt.xlabel("Transaction Batch (x1000)")
   plt.ylabel("Runtime")
-  plt.title("Runtime vs Transaction batch size")
-  plt.legend(['Asymptotic Runtime (x5000)', 'Actual Runtime ((x10000))'], loc='upper left')
+  plt.title("Query 5 Runtime vs Transaction batch size")
+  plt.legend(['Asymptotic Runtime (x1000)', 'Actual Runtime ((x10000))'], loc='upper left')
 
   plt.savefig(filename)
 
@@ -405,42 +379,48 @@ def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_5.png", row
 ############################################ Main Program ######################################################
 
 def main():
-
-    # please replace this with the path where the dataset file is
-    files = glob.glob("/Users/chrisantuseze/VSCodeProjects/DataStructures 2/Project1/*.csv")
-
+    # getting all the input files
+    files = glob.glob(root_path + "/*.csv")
+    # Read all the files placed in the current wokring directory with csv extenion
     data = [pd.read_csv(f) for f in files]
-    data = pd.concat(data,ignore_index=True)
+    data = pd.concat(data, ignore_index=True)
+    # drop all null records
     data = data.dropna()
+    # drop all duplicate records
+    data = data.drop_duplicates()
 
+    # prepare data accordingly as per data types and get required columns
     transactions = prepare_data(data)
     transactions = currency_converter(transactions)
 
     elapsed_time_averages = []
     asymptotic_times = []
-    rows = int(len(transactions)/1000)
-    for i in range(rows):
+    rows = int(len(transactions) / 1000)
+    # Run the sorting in batches of 1000, 2000, 3000, ......
+    for i in range(rows + 1):
         print(f"{(i + 1) * 1000} transactions")
 
         n = (i + 1) * 1000
-        aveg_elapsed_time_ns = run_n_times(transactions[0: n], 1)
+
+        # run the query for a specified number of runs
+        aveg_elapsed_time_ns = run_n_times(transactions[0: n], no_of_runs, save= i == rows)
         elapsed_time_averages.append(aveg_elapsed_time_ns)
 
-        # this is used to ensure both the asymptotic and actual run time have the same scale
-        n *= 5000
+        # this is used to ensure both the asymptotic and actual run time have the same scale while plotting the graph
+        n *= 1000
 
-        # we figured out that the buyer with the most number of nfts had 27 unique nfts, hence the exponent, k = 2
         k = 2
         asymptotic_times.append(n * k)
 
-    plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=elapsed_time_averages, rows=rows)
+    # plot graphs for the collected asymptotic run times
+    plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=elapsed_time_averages,
+               filename=output_path + "/query_5.png", rows=rows)
 
-    # run_query(transactions, run=1)
 
-def run_n_times(transactions, n):
+def run_n_times(transactions, n, save=False):
     elapsed_times = []
     for i in range(n):
-        elapsed_time, sorted_txns = run_query(transactions, run=i+1)
+        elapsed_time, sorted_txns = run_query(transactions, save=save)
         elapsed_times.append(elapsed_time)
 
     aveg_elapsed_time_ns = sum(elapsed_times)/len(elapsed_times)
@@ -449,26 +429,20 @@ def run_n_times(transactions, n):
 
     return aveg_elapsed_time_ns
     
-def run_query(transactions, run=1):
+def run_query(transactions, save=False):
     data = process_data(transactions)
     
+    # collect start time
     start_time1 = time.time_ns()
+    # sort using radix sort
     sorted_txns = radix_sort_by_n_nft(data)
+    # collect end time
     end_time1 = time.time_ns()
 
-    start_time2 = time.time_ns()
-    sorted_txns = sort_by_txns(sorted_txns)
-    end_time2 = time.time_ns()
+    elapsed_time = (end_time1 - start_time1)
 
-    elapsed_time = (end_time1 - start_time1) + (end_time2 - start_time2)
-
-    if run == 1:
+    if save:
         save_result(sorted_txns, transactions)
-
-        df = get_dataframe(sorted_txns)
-        print(df.head(10))
-
-        print(f"Run - {run} Sorting took {elapsed_time} nano secs ({elapsed_time/1e9} secs)")
 
     return elapsed_time, sorted_txns
 
@@ -488,4 +462,20 @@ def process_data(A: List[Query5Input]):
     return A
 
 if __name__ == "__main__":
+    # declare root path
+    global root_path
+    root_path = os.getcwd()
+
+    print("Kindly specify the number of runs needed (suggested runs is 1), Example : 1")
+    # No of times the script need to be run
+    global no_of_runs
+    no_of_runs = int(input())
+
+    # Output path to store results
+    global output_path
+    output_path = root_path + "/output"
+
+    if not os.path.isdir(output_path):
+        os.mkdir(output_path)
+
     main()

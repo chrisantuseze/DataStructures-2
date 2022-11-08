@@ -1,3 +1,4 @@
+#imports
 from typing import List
 import pandas as pd 
 import numpy as np
@@ -6,6 +7,7 @@ import glob
 import matplotlib.pyplot as plt
 import time
 from dataclasses import dataclass, field
+import os
 
 ##################################################### Data ###################################################
 
@@ -31,67 +33,6 @@ class NFTTransaction:
     price: float
     price_str: str
     market: str
-
-#################################################### Merge sort ##############################################
-
-# def merge(arr, l, m, r):
-#     n1 = m - l + 1
-#     n2 = r - m
- 
-#     # create temp arrays
-#     L = [0] * (n1)
-#     R = [0] * (n2)
- 
-#     # Copy data to temp arrays L[] and R[]
-#     for i in range(0, n1):
-#         L[i] = arr[l + i]
- 
-#     for j in range(0, n2):
-#         R[j] = arr[m + 1 + j]
- 
-#     # Merge the temp arrays back into arr[l..r]
-#     i = 0     # Initial index of first subarray
-#     j = 0     # Initial index of second subarray
-#     k = l     # Initial index of merged subarray
- 
-#     while i < n1 and j < n2:
-#         if L[i].avg >= R[j].avg:
-#             arr[k] = L[i]
-#             i += 1
-#         else:
-#             arr[k] = R[j]
-#             j += 1
-#         k += 1
- 
-#     # Copy the remaining elements of L[], if there
-#     # are any
-#     while i < n1:
-#         arr[k] = L[i]
-#         i += 1
-#         k += 1
- 
-#     # Copy the remaining elements of R[], if there
-#     # are any
-#     while j < n2:
-#         arr[k] = R[j]
-#         j += 1
-#         k += 1
- 
-# # l is for left index and r is right index of the
-# # sub-array of arr to be sorted
- 
- 
-# def merge_sort(arr, l, r):
-#     if l < r:
- 
-#         # Same as (l+r)//2, but avoids overflow for
-#         # large l and h
-#         m = l+(r-l)//2
- 
-#         # Sort first and second halves
-#         merge_sort(arr, l, m)
-#         merge_sort(arr, m+1, r)
-#         merge(arr, l, m, r)
 
 def merge_sort(A: List[Query2Data]):
     if len(A) == 1:
@@ -123,40 +64,47 @@ def merge_by_ntxn(L: List[Query2Data], R: List[Query2Data]):
 ############################################ Main Program ######################################################
 
 def main():
-
-    # please replace this with the path where the dataset file is
-    files = glob.glob("/Users/chrisantuseze/VSCodeProjects/DataStructures 2/Project1/*.csv")
-
+    # getting all the input files
+    files = glob.glob(root_path + "/*.csv")
+    # Read all the files placed in the current wokring directory with csv extenion
     data = [pd.read_csv(f) for f in files]
-    data = pd.concat(data,ignore_index=True)
+    data = pd.concat(data, ignore_index=True)
+    # drop all null records
     data = data.dropna()
+    # drop all duplicate records
+    data = data.drop_duplicates()
 
+    # prepare data accordingly as per data types and get required columns
     transactions = prepare_data(data)
     transactions = currency_converter(transactions)
 
     elapsed_time_averages = []
     asymptotic_times = []
-    rows = int(len(transactions)/1000)
-    for i in range(rows):
+    rows = int(len(transactions) / 1000)
+    # Run the sorting in batches of 1000, 2000, 3000, ......
+    for i in range(rows + 1):
         print(f"{(i + 1) * 1000} transactions")
 
         n = (i + 1) * 1000
-        aveg_elapsed_time_ns = run_n_times(transactions[0: n], 1)
+
+        # run the query for a specified number of runs
+        aveg_elapsed_time_ns = run_n_times(transactions[0: n], no_of_runs, save= i == rows)
         elapsed_time_averages.append(aveg_elapsed_time_ns)
 
-        # this is used to ensure both the asymptotic and actual run time have the same scale
-        n *= 5000
+        # this is used to ensure both the asymptotic and actual run time have the same scale while plotting the graph
+        n *= 1000
 
         asymptotic_times.append(n * np.log10(n))
 
-    plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=elapsed_time_averages, rows=rows)
-
+    # plot graphs for the collected asymptotic run times
+    plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=elapsed_time_averages,
+               filename=output_path + "/query_2.png", rows=rows)
     # run_query(transactions, run=1)
 
-def run_n_times(transactions, n):
+def run_n_times(transactions, n, save=False):
     elapsed_times = []
     for i in range(n):
-        elapsed_time, sorted_txns = run_query(transactions, run=i+1)
+        elapsed_time, sorted_txns = run_query(transactions, run=i+1, save=save)
         elapsed_times.append(elapsed_time)
 
     aveg_elapsed_time_ns = sum(elapsed_times)/len(elapsed_times)
@@ -165,21 +113,23 @@ def run_n_times(transactions, n):
 
     return aveg_elapsed_time_ns
 
-def run_query(transactions, run=1):
+def run_query(transactions, run=1, save=False):
     data = process_data(transactions)
 
+    # collect start_time
     start_time = time.time_ns()
+    # sort using merge sort algorithm
     # merge_sort(sorted_txns, 0, len(sorted_txns)-1)
     sorted_txns = merge_sort(data)
+    # collect end_time
     end_time = time.time_ns()
 
+    # calculate elapsed time
     elapsed_time = end_time - start_time
 
-    if run == 1:
+    if save:
         save_result(sorted_txns, transactions, elapsed_time)
         
-        print(f"Run - {run} Sorting took {elapsed_time} nano secs ({elapsed_time/1e9} secs)")
-
     return elapsed_time, sorted_txns
 
 ########################################## Utils #####################################################
@@ -229,7 +179,7 @@ def get_all_transactions(data: List[NFTTransaction]):
 def save_result(data: List[Query2Data], all_txns, elapsed_time):
     all_txns = get_all_transactions(all_txns)
 
-    with open("query2_out.txt", "w") as file:
+    with open(output_path + "/query2_out.txt", "w") as file:
         file.writelines(f"The execution time is {elapsed_time} nano secs\n")
 
         for row in data:
@@ -331,13 +281,13 @@ def get_dataframe(data):
   return df
 
 def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_2.png", rows=92):
-    x_axis = [i for i in range(rows)]
+    x_axis = [i for i in range(rows+1)]
     plt.plot(x_axis, asymptotic_runtimes, color ='red')
     plt.plot(x_axis, actual_runtimes, color ='blue')
     plt.xlabel("Transaction Batch (x1000)")
     plt.ylabel("Runtime")
-    plt.title("Runtime vs Transaction batch size")
-    plt.legend(['Asymptotic Runtime (x5000)', 'Actual Runtime ((x10000))'], loc='upper left')
+    plt.title("Query 2 Runtime vs Transaction batch size")
+    plt.legend(['Asymptotic Runtime (x1000)', 'Actual Runtime ((x10000))'], loc='upper left')
 
     plt.savefig(filename)
 
@@ -345,4 +295,20 @@ def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_2.png", row
 
 
 if __name__ == "__main__":
+    # declare root path
+    global root_path
+    root_path = os.getcwd()
+
+    print("Kindly specify the number of runs needed (suggested runs is 1), Example : 1")
+    # No of times the script need to be run
+    global no_of_runs
+    no_of_runs = int(input())
+
+    # Output path to store results
+    global output_path
+    output_path = root_path + "/output"
+
+    if not os.path.isdir(output_path):
+        os.mkdir(output_path)
+
     main()

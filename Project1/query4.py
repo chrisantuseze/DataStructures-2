@@ -1,4 +1,5 @@
-import pandas as pd 
+#imports
+import pandas as pd
 import numpy as np
 from typing import List
 import matplotlib.pyplot as plt 
@@ -37,59 +38,6 @@ class NFTTransaction:
     price_str: str
     market: str
     n_unique_buyers: int
-
-#################################################### Merge sort ##############################################
-def merge_sort_by_tokenid(A):
-    if len(A) == 1:
-        return A
-
-    q = int(len(A)/2)
-    B = A[:q]
-    C = A[q:]
-
-    L = merge_sort_by_tokenid(B)
-    R = merge_sort_by_tokenid(C)
-    return merge_by_tokenid(L, R)
-
-def merge_by_tokenid(L, R):
-    n = len(L) + len(R)
-    i = j = 0
-    B = []
-    for k in range(0, n):
-        if j >= len(R) or (i < len(L) and (int(L[i].token_id) >= int(R[j].token_id))):
-            B.append(L[i])
-            i = i + 1
-        else:
-            B.append(R[j])
-            j = j + 1
-
-    return B
-
-def merge_sort_by_nbuyer(A: List[Query4Data]) -> List[Query4Data]:
-    if len(A) == 1:
-        return A
-
-    q = int(len(A)/2)
-    B = A[:q]
-    C = A[q:]
-
-    L = merge_sort_by_nbuyer(B)
-    R = merge_sort_by_nbuyer(C)
-    return merge_by_nbuyer(L, R)
-
-def merge_by_nbuyer(L: List[Query4Data], R: List[Query4Data]) -> List[Query4Data]:
-    n = len(L) + len(R)
-    i = j = 0
-    B = []
-    for k in range(0, n):
-        if j >= len(R) or (i < len(L) and L[i].n_unique_buyers >= R[j].n_unique_buyers):
-            B.append(L[i])
-            i = i + 1
-        else:
-            B.append(R[j])
-            j = j + 1
-
-    return B
 
 #################################################### Radix sort ##############################################
 
@@ -297,12 +245,12 @@ def update_with_n_unique_buyers(sorted_txns: List[Query4Input]) -> List[Query4Da
   return new_txns
 
 def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_4.png", rows=92):
-    x_axis = [i for i in range(rows)]
+    x_axis = [i for i in range(rows+1)]
     plt.plot(x_axis, asymptotic_runtimes, color ='red')
     plt.plot(x_axis, actual_runtimes, color ='blue')
     plt.xlabel("Transaction Batch (x1000)")
     plt.ylabel("Runtime")
-    plt.title("Runtime vs Transaction batch size")
+    plt.title("Query 4 Runtime vs Transaction batch size")
     plt.legend(['Asymptotic Runtime (x5000)', 'Actual Runtime ((x10000))'], loc='upper left')
 
     plt.savefig(filename)
@@ -313,41 +261,49 @@ def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_4.png", row
 
 def main():
 
-    # please replace this with the path where the dataset file is
+    # getting all the input files
     files = glob.glob(root_path + "/*.csv")
-
+    # Read all the files placed in the current wokring directory with csv extenion
     data = [pd.read_csv(f) for f in files]
     data = pd.concat(data,ignore_index=True)
+    # drop all null records
     data = data.dropna()
+    # drop all duplicate records
     data = data.drop_duplicates()
 
+    # prepare data accordingly as per data types and get required columns
     transactions = prepare_data(data)
     transactions = currency_converter(transactions)
 
     elapsed_time_averages = []
     asymptotic_times = []
     rows = int(len(transactions)/1000)
-    for i in range(rows):
+    # Run the sorting in batches of 1000, 2000, 3000, ......
+    for i in range(rows+1):
         print(f"{(i + 1) * 1000} transactions")
 
         n = (i + 1) * 1000
-        aveg_elapsed_time_ns = run_n_times(transactions[0: n], no_of_runs)
+
+        # run the query for a specified number of runs
+        aveg_elapsed_time_ns = run_n_times(transactions[0: n], no_of_runs, save= i == rows)
         elapsed_time_averages.append(aveg_elapsed_time_ns)
 
-        n *= 5000
+        # this is used to ensure both the asymptotic and actual run time have the same scale while plotting the graph
+        n *= 1000
         
         # we figured out that the token with the most number of buyers had 1201 unique buyers, hence the exponent, k = 4
         k = 4
         asymptotic_times.append(n * k)
-        
-    plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=elapsed_time_averages,filename=output_path+"/"+"query_4.png", rows=rows)
+
+    # plot graphs for the collected asymptotic run times
+    plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=elapsed_time_averages,filename=output_path+"/query_4.png", rows=rows)
 
     # run_query(transactions, run=1)
 
-def run_n_times(transactions, n):
+def run_n_times(transactions, n, save=False):
     elapsed_times = []
     for i in range(n):
-        elapsed_time, sorted_txns = run_query(transactions, run=i+1)
+        elapsed_time, sorted_txns = run_query(transactions, save=save)
         elapsed_times.append(elapsed_time)
 
     aveg_elapsed_time_ns = sum(elapsed_times)/len(elapsed_times)
@@ -357,22 +313,21 @@ def run_n_times(transactions, n):
     return aveg_elapsed_time_ns
 
 
-def run_query(transactions, run=1):
+def run_query(transactions, save=False):
     data = process_data(transactions)
 
+    # collect start time
     start_time = time.time_ns()
+    # sort the data using radix sort
     sorted_txns = radix_sort_by_nbuyer(data)
+    # collect end time
     end_time = time.time_ns()
 
     elapsed_time = (end_time - start_time)
 
-    if run == 1:
+    if save:
+        # save result to output directory
         save_result(sorted_txns, transactions)
-
-        # df = get_dataframe(sorted_txns)
-        # print(df.head(10))
-
-    print(f"Run - {run} Sorting took {elapsed_time} nano secs ({elapsed_time/1e9} secs)")
 
     return elapsed_time, sorted_txns
 
@@ -392,13 +347,16 @@ def process_data(A: List[Query4Input]) -> List[Query4Data]:
     return A
 
 if __name__ == "__main__":
+    # declare root path
     global root_path
     root_path = os.getcwd()
-    
+
     print("Kindly specify the number of runs needed (suggested runs is 1), Example : 1")
-    global no_of_rows
+    # No of times the script need to be run
+    global no_of_runs
     no_of_runs = int(input())
-    
+
+    # Output path to store results
     global output_path
     output_path = root_path + "/output"
     
