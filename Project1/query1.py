@@ -108,10 +108,11 @@ def get_all_transactions(data: List[NFTTransaction]):
 
     return hash
 
-def save_result(data: List[Query1Data], all_txns):
+def save_result(data: List[Query1Data], all_txns, elapsed_time):
     all_txns = get_all_transactions(all_txns)
 
     with open(output_path + "/query1_out.txt", "w") as file:
+        file.writelines(f"The execution time is {elapsed_time} nano secs\n\n")
         for row in data:
             file.writelines(f"{row.token_id} (frequency = {row.n_txns})\n")
             file.writelines("Token ID,\t Txn hash,\t Date Time (UTC),\t Buyer,\t NFT,\t Type,\t Quantity,\t Price (USD)\n")
@@ -312,7 +313,7 @@ def run_query(transactions, save=False):
     elapsed_time = (end_time - start_time)
 
     if save:
-        save_result(sorted_txns, transactions)
+        save_result(sorted_txns, transactions, elapsed_time)
 
     return elapsed_time, sorted_txns
 

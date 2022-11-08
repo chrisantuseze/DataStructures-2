@@ -13,10 +13,7 @@ import os
 
 @dataclass(order=True)
 class Query2Data:
-    txn_hash: str
     token_id: int
-    quantity: int
-    price: str
     avg: float
 
 @dataclass(order=True)
@@ -99,7 +96,8 @@ def main():
     # plot graphs for the collected asymptotic run times
     plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=elapsed_time_averages,
                filename=output_path + "/query_2.png", rows=rows)
-    # run_query(transactions, run=1)
+
+    # run_query(transactions, save=True)
 
 def run_n_times(transactions, n, save=False):
     elapsed_times = []
@@ -142,6 +140,7 @@ def process_data(transactions):
     else:
       hash[item.token_id] = [item]
   
+  new_transactions = []
   for key in hash:
     cur = hash[key]
     sum = 0
@@ -151,19 +150,10 @@ def process_data(transactions):
       count = count + item.quantity
     
     avg = sum / count
-
-    cur_with_avg = []
-    for item in cur:
-      item.avg = avg
-      cur_with_avg.append(item)
     
-    hash[key] = cur_with_avg      
+    new_transactions.append(Query2Data(token_id=key, avg=avg))  
 
-  transactions_with_avg_price = []
-  for key in hash:
-    transactions_with_avg_price = np.concatenate((transactions_with_avg_price, hash[key]))
-
-  return transactions_with_avg_price
+  return new_transactions
 
 def get_all_transactions(data: List[NFTTransaction]):
     hash = {}
@@ -180,7 +170,7 @@ def save_result(data: List[Query2Data], all_txns, elapsed_time):
     all_txns = get_all_transactions(all_txns)
 
     with open(output_path + "/query2_out.txt", "w") as file:
-        file.writelines(f"The execution time is {elapsed_time} nano secs\n")
+        file.writelines(f"The execution time is {elapsed_time} nano secs\n\n")
 
         for row in data:
             file.writelines(f"{row.token_id} (average = {row.avg})\n")
@@ -265,19 +255,18 @@ def prepare_data(data) -> List[NFTTransaction]:
     
   return transactions
 
-def get_dataframe(data):
+def get_dataframe(data: List[Query2Data]):
   txns_list = []
 
   for row in data:
     dic = {
-        'Txn Hash': row.txn_hash, 
         'Token ID': row.token_id,
-        'Quantity': row.quantity,
-        'Price': row.price,
+        'Average': row.avg,
     }
     txns_list.append(dic)
 
   df = pd.DataFrame.from_records(txns_list)
+  df.to_excel(output_path + "/query2_out.xlsx")
   return df
 
 def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_2.png", rows=92):

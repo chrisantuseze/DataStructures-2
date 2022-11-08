@@ -34,6 +34,33 @@ class NFTTransaction:
     market: str
     n_unique_buyers: int
 
+
+def merge_sort(A: List[Query3Data]):
+    if len(A) == 1:
+        return A
+
+    q = int(len(A)/2)
+    B = A[:q]
+    C = A[q:]
+
+    L = merge_sort(B)
+    R = merge_sort(C)
+    return merge_by_ntxn(L, R)
+
+def merge_by_ntxn(L: List[Query3Data], R: List[Query3Data]):
+    n = len(L) + len(R)
+    i = j = 0
+    B = []
+    for k in range(0, n):
+        if j >= len(R) or (i < len(L) and L[i].n_txns >= R[j].n_txns):
+            B.append(L[i])
+            i = i + 1
+        else:
+            B.append(R[j])
+            j = j + 1
+
+    return B
+
 #################################################### Radix sort ##############################################
 
 def counting_sort_by_n_txns(A: List[Query3Data], exp) -> List[Query3Data]:
@@ -111,10 +138,11 @@ def get_all_transactions(data: List[NFTTransaction]):
 
     return hash
 
-def save_result(data: List[Query3Data], all_txns):
+def save_result(data: List[Query3Data], all_txns, elapsed_time):
     all_txns = get_all_transactions(all_txns)
 
     with open(output_path + "/query3_out.txt", "w") as file:
+        file.writelines(f"The execution time is {elapsed_time} nano secs\n\n")
         for row in data:
             file.writelines(f"{row.buyer} (frequency = {row.n_txns})\n")
             file.writelines("Buyer,\t Txn hash,\t Date Time (UTC),\t Buyer,\t NFT,\t Type,\t Quantity,\t Price (USD)\n")
@@ -213,6 +241,7 @@ def get_dataframe(data: List[Query3Data]):
     txns_list.append(dic)
 
   df = pd.DataFrame.from_records(txns_list)
+  df.to_excel(output_path + "/query3_out.xlsx")
   return df
 
 def update_with_n_txns(sorted_txns: List[NFTTransaction]) -> List[Query3Data]:
@@ -252,8 +281,11 @@ def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_3.png", row
     plt.show()
 
 def convert_string_to_ascii(input):
-  a = list(input.encode('ascii'))
-  return int("".join(map(str, a)))
+  try:
+    a = list(input.encode('ascii'))
+    return int("".join(map(str, a)))
+  except Exception:
+    return input
 
 ############################################ Main Program ######################################################
 
@@ -295,7 +327,7 @@ def main():
     plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=elapsed_time_averages,
                filename=output_path + "/query_3.png", rows=rows)
 
-    # run_query(transactions, run=1)
+    # run_query(transactions, save=True)
 
 def run_n_times(transactions, n, save=False):
     elapsed_times = []
@@ -322,7 +354,7 @@ def run_query(transactions, save=False):
     elapsed_time = (end_time - start_time)
 
     if save:
-        save_result(sorted_txns, transactions)
+        save_result(sorted_txns, transactions, elapsed_time)
 
     return elapsed_time, sorted_txns
 

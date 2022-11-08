@@ -164,10 +164,12 @@ def get_all_transactions(data: List[NFTTransaction]):
 
     return hash
 
-def save_result(data: List[Query5Data], all_txns):
+def save_result(data: List[Query5Data], all_txns, elapsed_time):
     all_txns = get_all_transactions(all_txns)
 
     with open(output_path + "/query5_out.txt", "w") as file:
+        file.writelines(f"The execution time is {elapsed_time} nano secs\n\n")
+
         for row in data:
             file.writelines(f"{row.buyer} (frequency (unique NFTs = {row.total_unique_nft}, total NFTs = {row.total_txns})\n")
             file.writelines("Token ID,\t Txn hash,\t Date Time (UTC),\t Buyer,\t NFT,\t Type,\t Quantity,\t Price (USD)\n")
@@ -272,6 +274,7 @@ def get_dataframe(data: List[Query5Data]):
     txns_list.append(dic)
 
   df = pd.DataFrame.from_records(txns_list)
+  df.to_excel(output_path + "/query5_out.xlsx")
   return df
 
 def update_with_n_unique_nfts(sorted_txns: List[Query5Input]) -> List[Query5Data]:
@@ -416,6 +419,8 @@ def main():
     plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=elapsed_time_averages,
                filename=output_path + "/query_5.png", rows=rows)
 
+    # elapsed_time, sorted_txns = run_query(transactions, save=True)
+
 
 def run_n_times(transactions, n, save=False):
     elapsed_times = []
@@ -439,10 +444,14 @@ def run_query(transactions, save=False):
     # collect end time
     end_time1 = time.time_ns()
 
-    elapsed_time = (end_time1 - start_time1)
+    start_time2 = time.time_ns()
+    sorted_txns = sort_by_txns(sorted_txns)
+    end_time2 = time.time_ns()
+
+    elapsed_time = (end_time1 - start_time1) + (end_time2 - start_time2)
 
     if save:
-        save_result(sorted_txns, transactions)
+        save_result(sorted_txns, transactions, elapsed_time)
 
     return elapsed_time, sorted_txns
 
@@ -458,7 +467,7 @@ def process_data(A: List[Query5Input]):
     for key in hash:
         transactions = np.concatenate((transactions, hash[key]))
 
-    A = update_with_n_unique_nfts(transactions)
+    A = update_with_n_unique_nfts_without_nft_names(transactions)
     return A
 
 if __name__ == "__main__":
