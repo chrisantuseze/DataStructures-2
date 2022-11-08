@@ -368,15 +368,20 @@ def get_txn(first_buy_date, last_buy_date, second_last_buy_date, third_last_buy_
     )
 
 def hours_between(last_date, start_date):
-  last_date = str(last_date)
-  start_date = str(start_date)
+  try:
+    last_date = str(last_date)
+    start_date = str(start_date)
 
-  f = "%m/%d/%Y %H:%M"
-  t1 = datetime.strptime(last_date, f)
-  t2 = datetime.strptime(start_date, f)
+    f = "%m/%d/%Y %H:%M"
+    t1 = datetime.strptime(last_date, f)
+    t2 = datetime.strptime(start_date, f)
 
-  diff_in_hours = (t1 - t2).seconds/360
-  return diff_in_hours
+    diff_in_hours = (t1 - t2).seconds/360
+    return diff_in_hours
+  except Exception:
+
+    # We realized that if the date is in an inconsistent format, it throws an error. So this error handler avoids that scenario
+    return 2
 
 def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_6.png", rows=92):
     x_axis = [i for i in range(rows+1)]
