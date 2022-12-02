@@ -22,12 +22,12 @@ class NFTTransaction:
     price: float
     price_str: str
 
-def currency_converter(data: List[NFTTransaction]) -> List[NFTTransaction]:
-  for row in data:
-    price = row.price_str
+def currency_converter(data):
+  for row in data.itertuples():
+    price = data.at[row.Index, 'Price']
 
     if type(price) is not str:
-      row.price = float(float(price) * 1.00)
+      data.at[row.Index, 'Price'] = float(float(price) * 1.00)
       continue
 
     try:
@@ -35,75 +35,89 @@ def currency_converter(data: List[NFTTransaction]) -> List[NFTTransaction]:
       price = price.replace(",", "")
 
       if currency == "ETH":
-        row.price = float(float(price) * 1309.97)
+        data.at[row.Index, 'Price'] = float(float(price) * 1309.97)
       
       elif currency == "WETH":
-        row.price = float(float(price) * 1322.16)
+        data.at[row.Index, 'Price'] = float(float(price) * 1322.16)
 
       elif currency == "ASH":
-        row.price = float(float(price) * 0.9406)
+        data.at[row.Index, 'Price'] = float(float(price) * 0.9406)
       
       elif currency == "GALA":
-        row.price = float(float(price) * 0.03748)
+        data.at[row.Index, 'Price'] = float(float(price) * 0.03748)
         
       elif currency == "TATR":
-        row.price = float(float(price) * 0.012056)
+        data.at[row.Index, 'Price'] = float(float(price) * 0.012056)
         
       elif currency == "USDC":
-        row.price = float(float(price) * 1.00)
+        data.at[row.Index, 'Price'] = float(float(price) * 1.00)
         
       elif currency == "MANA":
-        row.price = float(float(price) * 0.64205)
+        data.at[row.Index, 'Price'] = float(float(price) * 0.64205)
         
       elif currency == "SAND":
-        row.price = float(float(price) * 0.7919)
+        data.at[row.Index, 'Price'] = float(float(price) * 0.7919)
         
       elif currency == "RARI":
-        row.price = float(float(price) * 2.18)
+        data.at[row.Index, 'Price'] = float(float(price) * 2.18)
         
       elif currency == "CTZN":
-        row.price = float(float(price) * 0.00321)
+        data.at[row.Index, 'Price'] = float(float(price) * 0.00321)
         
       elif currency == "APE":
-        row.price = float(float(price) * 4.62)
+        data.at[row.Index, 'Price'] = float(float(price) * 4.62)
 
       else:
-        row.price = float(float(price) * 1.00)
+        data.at[row.Index, 'Price'] = float(float(price) * 1.00)
 
     except ValueError:
       None
       
   return data
 
-def merge_sort_by_nft(A: List[NFTTransaction]) -> List[NFTTransaction]:
+def merge_sort_by_nft(A):
     if len(A) == 1:
         return A
 
     q = int(len(A)/2)
-    B = A[:q]
-    C = A[q:]
+    B = A.iloc[:q]
+    C = A.iloc[q:]
 
     L = merge_sort_by_nft(B)
     R = merge_sort_by_nft(C)
     return merge_by_nft(L, R)
 
-def merge_by_nft(L: List[NFTTransaction], R: List[NFTTransaction]) -> List[NFTTransaction]:
+def merge_by_nft(L, R):
     n = len(L) + len(R)
     i = j = 0
-    B = []
+    B = pd.DataFrame()
     for k in range(0, n):
-        if j >= len(R) or (i < len(L) and L[i].nft >= R[j].nft):
-            B.append(L[i])
+        if j >= len(R) or (i < len(L) and L.iloc[i]['NFT'] >= R.iloc[j]['NFT']):
+            pd.concat([B, L.iloc[i]])
             i = i + 1
         else:
-            B.append(R[j])
+            pd.concat([B, R.iloc[j]])
             j = j + 1
 
     return B
 
-def prepare_data(data) -> List[NFTTransaction]:
-    # data = data.reset_index()  # make sure indexes pair with number of rows
+def get_and_prepare_data():
+    data = pd.read_csv("dataset.csv")
+    data = data.dropna()
+    data = data.drop_duplicates()
 
+    nft_txns = data[['Txn Hash', 'UnixTimestamp', 'Date Time (UTC)', 'Buyer', 'NFT', 'Price']]
+
+    nft_txns = nft_txns.iloc[0:5000]
+
+    nft_txns = currency_converter(nft_txns)
+    unique_buyer_txns = nft_txns.groupby('Buyer', as_index=False).first()
+    nft_txns = nft_txns.sort_values(by=['NFT'], ascending=False)
+    nft_txns = convert_to_object_list(nft_txns)
+
+    return nft_txns, unique_buyer_txns
+
+def convert_to_object_list(data) -> List[NFTTransaction]:
     transactions = []
     for i, row in data.iterrows():
         transactions.append(NFTTransaction(
@@ -135,33 +149,32 @@ def get_dataframe(data: List[NFTTransaction]):
   df.to_excel("sorted_data.xlsx")
   return df
 
-# Kruskal's algorithm in Python
-def get_unique_buyers(data: List[NFTTransaction]) -> List[str]:
-        unique_count = 0
-        unique_buyers = []
-        buyer_timestamps = []
-        for row in data:
-            if row.buyer not in unique_buyers:
-                unique_count += 1
-                unique_buyers.append(row.buyer)
-                buyer_timestamps.append(row.time_stamp)
+def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_6.png", rows=92):
+    x_axis = [i for i in range(rows+1)]
+    plt.plot(x_axis, asymptotic_runtimes, color ='red')
+    plt.plot(x_axis, actual_runtimes[0], color ='blue')
+    plt.plot(x_axis, actual_runtimes[1], color ='orange')
+    plt.xlabel("Transaction Batch (x1000)")
+    plt.ylabel("Runtime")
+    plt.title("Query 6 Runtime vs Transaction batch size")
+    plt.legend(['Asymptotic Runtime', 'Min ST Runtime', 'Max ST Runtime'], loc='upper left')
 
-        return unique_count, unique_buyers, buyer_timestamps
+    plt.savefig(filename)
+    plt.show()
+
 
 class Graph:
-    def __init__(self, temp_n_buyers, temp_buyers, buyer_timestamps) -> None:
-        self.temp_n_buyers = temp_n_buyers
-        self.temp_buyers = temp_buyers
-        self.buyer_timestamps = buyer_timestamps
+    def __init__(self, unique_buyer_txns) -> None:
+        self.unique_buyer_txns = unique_buyer_txns
+        self.temp_buyers = unique_buyer_txns['Buyer']
 
-        # self.n_buyers = 0
-        # self.buyers = []
+        self.temp_n_buyers = len(self.temp_buyers)
+        self.buyer_timestamps = unique_buyer_txns['Date Time (UTC)']
+
         self.buyers = []
         self.graph = []
 
-        self.adjacency_matrix = np.zeros((temp_n_buyers, temp_n_buyers), dtype=tuple)
-
-        self.scc_adjacency_matrix = np.zeros((temp_n_buyers, temp_n_buyers), dtype=tuple)
+        self.adjacency_matrix = np.zeros((self.temp_n_buyers, self.temp_n_buyers), dtype=tuple)
 
     def addEdge(self, node1, node2, price):
         self.graph.append([node1, node2, price])
@@ -171,48 +184,31 @@ class Graph:
             self.buyers.append(buyer)
 
     def build(self, data: List[NFTTransaction]) -> None:
-        self.data = data
 
-        with open("original_adjacency_matrix.txt", "w") as file:
+        with open(output_path + "/original_adjacency_matrix.txt", "w") as file:
             count = 0
-            for i in range(1, len(self.data)): #also consider adding a logic to prevent a scenario where a relationship would exist for two buyers for the a different txns
-                if self.data[i-1].nft == self.data[i].nft and self.data[i-1].buyer != self.data[i].buyer:
-                    # index1 = self.temp_buyers.index(self.data[i-1].buyer)
-                    # index2 = self.temp_buyers.index(self.data[i].buyer)
-
-                    # self.adjacency_matrix[index1][index2] = (self.data[i].nft, self.data[i].price)
+            for i in range(1, len(data)):
+                if data[i-1].nft == data[i].nft and data[i-1].buyer != data[i].buyer:
                     
-                    # self.add_to_buyers_list(self.data[i-1].buyer)
-                    # self.add_to_buyers_list(self.data[i].buyer)
+                    self.buyers.insert(count, data[i-1].buyer)
+                    self.buyers.insert(count + 1, data[i].buyer)
+                    self.addEdge(count, count + 1, float(data[i].price_str))
 
-                    self.buyers.insert(count, self.data[i-1].buyer)
-                    self.buyers.insert(count + 1, self.data[i].buyer)
-                    self.addEdge(count, count + 1, self.data[i].price)
+                    count += 2
 
-                    count += 1
+                    file.writelines(f"{data[i-1].buyer} - {data[i].buyer} -> [{data[i].nft, data[i].price_str, data[i].date_time}] \n")
 
-                    # file.writelines(f'{self.data[i-1].buyer} - {self.data[i].buyer} -> {str(self.adjacency_matrix[index1][index2])} \n')
+                elif data[i-1].nft == data[i].nft and data[i-1].buyer == data[i].buyer and i + 1 < len(data) and data[i].buyer != data[i+1].buyer:
+                   
+                    self.buyers.insert(count, data[i].buyer)
+                    self.buyers.insert(count + 1, data[i+1].buyer)
+                    self.addEdge(count, count + 1, float(data[i+1].price_str))
 
-                elif self.data[i-1].nft == self.data[i].nft and self.data[i-1].buyer == self.data[i].buyer and i + 1 < len(self.data) and self.data[i].buyer != self.data[i+1].buyer:
-                    # index1 = self.temp_buyers.index(self.data[i].buyer)
-                    # index2 = self.temp_buyers.index(self.data[i+1].buyer)
+                    count += 2
 
-                    # self.adjacency_matrix[index1][index2] = (self.data[i].nft, self.data[i].price)
-
-                    # self.add_to_buyers_list(self.data[i-1].buyer)
-                    # self.add_to_buyers_list(self.data[i].buyer)
-
-                    self.buyers.insert(count, self.data[i-1].buyer)
-                    self.buyers.insert(count + 1, self.data[i].buyer)
-                    self.addEdge(count, count + 1, self.data[i].price)
-
-                    count += 1
-
-                    # file.writelines(f'{self.data[i].buyer} - {self.data[i+1].buyer} -> {str(self.adjacency_matrix[index1][index2])} \n')
+                    file.writelines(f"{data[i].buyer} - {data[i+1].buyer} -> [{data[i+1].nft, data[i+1].price_str, data[i+1].date_time}] \n")
 
                 
-        # self.n_buyers = len(self.buyers)
-
      # Search function
     def find(self, parent, i):
         try:
@@ -242,116 +238,115 @@ class Graph:
           pass
 
     #  Applying Kruskal algorithm
+    def kruskal(self, filename, is_reverse):
+        result = []
+        i, e = 0, 0
+        self.graph = sorted(self.graph, key=lambda item: item[2], reverse=is_reverse)
+        parent = []
+        rank = []
+        for node in range(len(self.graph) + 1):
+            parent.append(node)
+            rank.append(0)
+
+        while e < len(self.graph) - 1:
+            try:
+              node1, node2, price = self.graph[i]
+            except:
+              pass
+
+            i = i + 1
+            x = self.find(parent, node1)
+            y = self.find(parent, node2)
+
+            if x != y:
+                e = e + 1
+                result.append([node1, node2, price])
+                self.apply_union(parent, rank, x, y)
+
+
+        with open(output_path + "/" + filename, "w") as file:
+          tree = "maximum" if is_reverse else "minimum"
+          file.writelines(f"\nThe following are vertices and edges of the constructed {tree} spanning tree:\n")
+          file.writelines("------------------------------------------------------------------------------\n\n")
+          cost = 0
+          for node1, node2, price in result:
+              # print("%d - %d: %d" % (node1, node2, price))
+
+              buyer1 = self.buyers[node1]
+              buyer2 = self.buyers[node2]
+
+              buyer1_row = self.unique_buyer_txns.loc[self.unique_buyer_txns['Buyer'] == buyer1]
+              buyer2_row = self.unique_buyer_txns.loc[self.unique_buyer_txns['Buyer'] == buyer2]
+
+              # Save the entry in an adjacency matrix
+              cost += price
+              try:
+                file.writelines(f"({buyer1} - {buyer2} -> [{buyer2_row.iloc[0]['NFT']}, {buyer2_row.iloc[0]['Price']}, {buyer2_row.iloc[0]['Date Time (UTC)']}])\n\n")
+          
+              except:
+                pass
+
+
+          file.writelines("------------------------------------------------------------------------------\n")
+          file.writelines(f"The {tree} cost is {cost}\n")
+          file.writelines("------------------------------------------------------------------------------\n")
+
     def kruskal_min_st(self):
-        result = []
-        i, e = 0, 0
-        self.graph = sorted(self.graph, key=lambda item: item[2])
-        parent = []
-        rank = []
-        for node in range(len(self.graph) + 1):
-            parent.append(node)
-            rank.append(0)
+        self.kruskal("min_st_adjacency_matrix.txt", False)
 
-        while e < len(self.graph) - 1:
-            try:
-              node1, node2, price = self.graph[i]
-            except:
-              pass
-
-            i = i + 1
-            x = self.find(parent, node1)
-            y = self.find(parent, node2)
-
-            if x != y:
-                e = e + 1
-                result.append([node1, node2, price])
-                self.apply_union(parent, rank, x, y)
-
-
-
-        with open("min_st_adjacency_matrix.txt", "w") as file:
-          for node1, node2, price in result:
-              # print("%d - %d: %d" % (node1, node2, price))
-
-              buyer1 = self.buyers[node1]
-              buyer2 = self.buyers[node2]
-
-              index1 = self.temp_buyers.index(buyer1)
-              index2 = self.temp_buyers.index(buyer2)
-
-              # Save the entry in an adjacency matrix
-              file.writelines(f"({buyer1}, {self.buyer_timestamps[index1]})\n")
-              file.writelines(f"({buyer2}, {self.buyer_timestamps[index2]})\n")
-
-    #  Applying Kruskal algorithm
     def kruskal_max_st(self):
-        result = []
-        i, e = 0, 0
-        self.graph = sorted(self.graph, key=lambda item: item[2], reverse=True)
-        parent = []
-        rank = []
-        for node in range(len(self.graph) + 1):
-            parent.append(node)
-            rank.append(0)
+        self.kruskal("max_st_adjacency_matrix.txt", True)
 
-        while e < len(self.graph) - 1:
-            try:
-              node1, node2, price = self.graph[i]
-            except:
-              pass
-
-            i = i + 1
-            x = self.find(parent, node1)
-            y = self.find(parent, node2)
-
-            if x != y:
-                e = e + 1
-                result.append([node1, node2, price])
-                self.apply_union(parent, rank, x, y)
-
-
-        with open("max_st_adjacency_matrix.txt", "w") as file:
-          for node1, node2, price in result:
-              # print("%d - %d: %d" % (node1, node2, price))
-
-              buyer1 = self.buyers[node1]
-              buyer2 = self.buyers[node2]
-
-              index1 = self.temp_buyers.index(buyer1)
-              index2 = self.temp_buyers.index(buyer2)
-
-              # Save the entry in an adjacency matrix
-              file.writelines(f"({buyer1}, {self.buyer_timestamps[index1]})\n")
-              file.writelines(f"({buyer2}, {self.buyer_timestamps[index2]})\n")
-
-
-if __name__ == "__main__":
-    sys.setrecursionlimit(100000)
-
-    data = pd.read_csv("dataset.csv")
-    nft_txns = prepare_data(data[0:80000])
-
-    nft_txns = currency_converter(nft_txns)
-
-    nft_txns = merge_sort_by_nft(nft_txns)
-
-    temp_n_buyers, temp_buyers, buyer_timestamps = get_unique_buyers(nft_txns)
-    graph = Graph(temp_n_buyers, temp_buyers, buyer_timestamps)
+def run_query(nft_txns, unique_buyer_txns):
+    graph = Graph(unique_buyer_txns)
 
     start_time = time.time_ns()
     graph.build(nft_txns)
     end_time = time.time_ns()
-    elapsed_time = (end_time - start_time)/1e9
-    print(f'The time taken to build the graph is {elapsed_time} secs\n')
+    elapsed_time1 = (end_time - start_time)/1e9
+    # print(f'The time taken to build the graph is {elapsed_time1} secs\n')
 
     start_time = time.time_ns()
     graph.kruskal_min_st()
     end_time = time.time_ns()
-    elapsed_time = (end_time - start_time)/1e9
-    print(f'The time taken to perform kruskal MST is {elapsed_time} secs')
+    elapsed_time2 = (end_time - start_time)/1e9
 
     start_time = time.time_ns()
     graph.kruskal_max_st()
     end_time = time.time_ns()
-    elapsed_time = (end_time - start_time)/1e9
-    print(f'The time taken to perform kruskal Max ST is {elapsed_time} secs')
+    elapsed_time3 = (end_time - start_time)/1e9
+
+    return elapsed_time1, elapsed_time2, elapsed_time3
+
+if __name__ == "__main__":
+    sys.setrecursionlimit(100000)
+
+    global root_path
+    root_path = os.getcwd()
+
+    # Output path to store results
+    global output_path
+    output_path = root_path + "/output"
+
+    if not os.path.isdir(output_path):
+        os.mkdir(output_path)
+
+    nft_txns, unique_buyer_txns = get_and_prepare_data()
+
+    min_st_elapsed_times = []
+    max_st_elapsed_times = []
+    asymptotic_times = []
+    rows = int(len(nft_txns) / 1000)
+
+    # Run in intervals of 1000, 2000, 3000, ......
+    for i in range(rows + 1):
+        n = (i + 1) * 1000
+        build_elapsed_time, min_st_run_elapsed_time, max_st_run_elapsed_time = run_query(nft_txns[0: n], unique_buyer_txns[0: n])
+        min_st_elapsed_times.append(min_st_run_elapsed_time)
+        max_st_elapsed_times.append(max_st_run_elapsed_time)
+
+        asymptotic_times.append(n * 2) #TODO change this to the actual asymptotic time (build time + SCC time)
+        print(f'The total time taken to for both minimum and maximum st for {n} transactions is {min_st_run_elapsed_time + max_st_run_elapsed_time} secs\n')
+
+    #Note since the two runtimes would have close values, one many superimpose on the other. It is not a bug. Although it won't happen once everything is done
+    plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=[min_st_elapsed_times, max_st_elapsed_times], filename=output_path + "/query_6.png", rows=rows)
