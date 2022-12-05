@@ -18,7 +18,7 @@ class NFTTransaction:
     time_stamp: str
     date_time: str
     buyer: str
-    nft: str
+    token_id: str
     price: float
     price_str: str
 
@@ -75,43 +75,17 @@ def currency_converter(data):
       
   return data
 
-def merge_sort_by_nft(A):
-    if len(A) == 1:
-        return A
-
-    q = int(len(A)/2)
-    B = A.iloc[:q]
-    C = A.iloc[q:]
-
-    L = merge_sort_by_nft(B)
-    R = merge_sort_by_nft(C)
-    return merge_by_nft(L, R)
-
-def merge_by_nft(L, R):
-    n = len(L) + len(R)
-    i = j = 0
-    B = pd.DataFrame()
-    for k in range(0, n):
-        if j >= len(R) or (i < len(L) and L.iloc[i]['NFT'] >= R.iloc[j]['NFT']):
-            pd.concat([B, L.iloc[i]])
-            i = i + 1
-        else:
-            pd.concat([B, R.iloc[j]])
-            j = j + 1
-
-    return B
-
 def get_and_prepare_data():
     data = pd.read_csv("dataset.csv")
     data = data.dropna()
     data = data.drop_duplicates()
 
-    nft_txns = data[['Txn Hash', 'UnixTimestamp', 'Date Time (UTC)', 'Buyer', 'NFT', 'Price']]
+    nft_txns = data[['Txn Hash', 'UnixTimestamp', 'Date Time (UTC)', 'Buyer', 'Token ID', 'Price']]
 
-    nft_txns = nft_txns.iloc[0:5000]
+    # nft_txns = nft_txns.iloc[0:5000]
 
     nft_txns = currency_converter(nft_txns)
-    nft_txns = nft_txns.sort_values(by=['NFT'], ascending=False)
+    nft_txns = nft_txns.sort_values(by=['Token ID', 'Date Time (UTC)'], ascending=[False, True])
     nft_txns = convert_to_object_list(nft_txns)
 
     return nft_txns
@@ -124,7 +98,7 @@ def convert_to_object_list(data) -> List[NFTTransaction]:
             time_stamp=row['UnixTimestamp'],
             date_time=row['Date Time (UTC)'],
             buyer=row['Buyer'],
-            nft=row['NFT'],
+            token_id=row['Token ID'],
             price_str=row['Price'],
             price=0.0))
         
@@ -139,7 +113,7 @@ def get_dataframe(data: List[NFTTransaction]):
         'UnixTimestamp': row.time_stamp,
         'Date Time (UTC)': row.date_time,
         'Buyer': row.buyer,
-        'NFT': row.nft,
+        'Token ID': row.token_id,
         'Price': row.price
     }
     txns_list.append(dic)
@@ -163,35 +137,27 @@ def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_4.png", row
 class Graph:
   def __init__(self, data: List[NFTTransaction]) -> None:
     self.data = data
-    self.n_buyers, self.buyers = self.get_unique_buyers(self.data)
-    # print(self.n_buyers)
-    self.adjacency_matrix = np.zeros((self.n_buyers, self.n_buyers), dtype=tuple)
 
-  def get_unique_buyers(self, data: List[NFTTransaction]) -> List[str]:
-    unique_count = 0
-    unique_buyers = []
-    #np.unique
-    for row in data:
-        if row.buyer not in unique_buyers:
-            unique_count += 1
-            unique_buyers.append(row.buyer)
+  def build(self, save=False) -> None:
+    if not save:
+      return
 
-    return unique_count, unique_buyers
+    adjacency_graph = []
+    for i in range(1, len(self.data)):
+        if self.data[i-1].token_id == self.data[i].token_id and self.data[i-1].buyer != self.data[i].buyer:
+          adjacency_graph.append(f"{self.data[i-1].buyer} - {self.data[i].buyer} -> [{self.data[i].token_id, self.data[i].price_str, self.data[i].date_time}] \n")
 
-  def build(self) -> None:
+        elif self.data[i-1].token_id == self.data[i].token_id and self.data[i-1].buyer == self.data[i].buyer and i + 1 < len(self.data) and self.data[i].buyer != self.data[i+1].buyer:
+          adjacency_graph.append(f"{self.data[i].buyer} - {self.data[i+1].buyer} -> [{self.data[i+1].token_id, self.data[i+1].price_str, self.data[i+1].date_time}] \n")
+
     with open(output_path + "/query4_adjacency_matrix.txt", "w") as file:
-      for i in range(1, len(self.data)):
-        if self.data[i-1].nft == self.data[i].nft and self.data[i-1].buyer != self.data[i].buyer:
-          file.writelines(f"{self.data[i-1].buyer} - {self.data[i].buyer} -> [{self.data[i].nft, self.data[i].price_str, self.data[i].date_time}] \n")
+      file.writelines(adjacency_graph)
 
-        elif self.data[i-1].nft == self.data[i].nft and self.data[i-1].buyer == self.data[i].buyer and i + 1 < len(self.data) and self.data[i].buyer != self.data[i+1].buyer:
-          file.writelines(f"{self.data[i].buyer} - {self.data[i+1].buyer} -> [{self.data[i+1].nft, self.data[i+1].price_str, self.data[i+1].date_time}] \n")
-
-def run_query(nft_txns):
+def run_query(nft_txns, save):
     graph = Graph(nft_txns)
 
     start_time = time.time_ns()
-    graph.build()
+    graph.build(save)
     end_time = time.time_ns()
     elapsed_time = (end_time - start_time)/1e9
 
@@ -219,7 +185,7 @@ if __name__ == "__main__":
     # Run in intervals of 1000, 2000, 3000, ......
     for i in range(rows + 1):
         n = (i + 1) * 1000
-        run_elapsed_time = run_query(nft_txns[0: n])
+        run_elapsed_time = run_query(nft_txns[0: n], save=(i == rows))
         elapsed_times.append(run_elapsed_time)
 
         asymptotic_times.append(n * 2) #TODO change this to the actual asymptotic time (build time)

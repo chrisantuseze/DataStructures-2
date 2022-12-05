@@ -106,7 +106,7 @@ def get_and_prepare_data():
     data = data.dropna()
     data = data.drop_duplicates()
 
-    nft_txns = data[['Txn Hash', 'UnixTimestamp', 'Date Time (UTC)', 'Buyer', 'NFT', 'Price']]
+    nft_txns = data[['Txn Hash', 'UnixTimestamp', 'Date Time (UTC)', 'Buyer', 'Token ID', 'Price']]
 
     nft_txns = nft_txns.iloc[0:1000]
 
@@ -114,7 +114,7 @@ def get_and_prepare_data():
 
     unique_buyer_txns = nft_txns.groupby('Buyer', as_index=False).first()
 
-    nft_txns = nft_txns.sort_values(by=['NFT'], ascending=False)
+    nft_txns = nft_txns.sort_values(by=['Token ID', 'Date Time (UTC)'], ascending=[False, True])
 
     nft_txns = convert_to_object_list(nft_txns)
 
@@ -309,7 +309,7 @@ class DijkstraNodeDecorator:
         return self
 
 class Graph(): 
-    def __init__(self, unique_buyer_txns):
+    def __init__(self, unique_buyer_txns, save=False):
         self.unique_buyer_txns = unique_buyer_txns
         self.unique_buyers = unique_buyer_txns['Buyer']
         self.n_buyers = len(self.unique_buyers)
@@ -324,6 +324,8 @@ class Graph():
         self.graph = [[None, []]]
         # print(len(self.graph))
         self.src_buyer = None
+
+        self.save = save
 
 
     def connect_dir(self, node1, node2, weight = 1):
@@ -351,51 +353,52 @@ class Graph():
 
 
     def build(self, data) -> None:
+        count = 0
+        adjacency_graph = []
+        for i in range(1, len(data)):
+            if data[i-1].nft == data[i].nft and data[i-1].buyer != data[i].buyer:
 
-        with open(output_path + "/original_adjacency_matrix.txt", "w") as file:
-            count = 0
-            for i in range(1, len(data)):
-                if data[i-1].nft == data[i].nft and data[i-1].buyer != data[i].buyer:
+                node1 = Node(data[i-1].buyer, data[i-1].nft)
+                node1.index = count
+                count += 1
 
-                    node1 = Node(data[i-1].buyer, data[i-1].nft)
-                    node1.index = count
-                    count += 1
+                node2 = Node(data[i].buyer, data[i].nft)
+                node2.index = count
+                count += 1
 
-                    node2 = Node(data[i].buyer, data[i].nft)
-                    node2.index = count
-                    count += 1
+                # try:
+                #     self.connect_dir(node1, node2, weight=data[i].price_str)
+                # except:
+                #     print(len(self.graph), count)
+                #     self.connect_dir(node1, node2, weight=data[i].price_str)
 
-                    # try:
-                    #     self.connect_dir(node1, node2, weight=data[i].price_str)
-                    # except:
-                    #     print(len(self.graph), count)
-                    #     self.connect_dir(node1, node2, weight=data[i].price_str)
+                adjacency_graph.append(f"{data[i-1].buyer} - {data[i].buyer} -> [{data[i].nft, data[i].price_str, data[i].date_time}] \n")
 
-                    file.writelines(f"{data[i-1].buyer} - {data[i].buyer} -> [{data[i].nft, data[i].price_str, data[i].date_time}] \n")
+            elif data[i-1].nft == data[i].nft and data[i-1].buyer == data[i].buyer and i + 1 < len(data) and data[i].buyer != data[i+1].buyer:
 
-                elif data[i-1].nft == data[i].nft and data[i-1].buyer == data[i].buyer and i + 1 < len(data) and data[i].buyer != data[i+1].buyer:
+                # print(data.at[row.Index-1, 'Buyer'], data.at[row.Index, 'Buyer'], data.at[row.Index, 'NFT'])
 
-                    # print(data.at[row.Index-1, 'Buyer'], data.at[row.Index, 'Buyer'], data.at[row.Index, 'NFT'])
+                node1 = Node(data[i].buyer, data[i].price_str)
+                node1.index = count
+                count += 1
 
-                    node1 = Node(data[i].buyer, data[i].price_str)
-                    node1.index = count
-                    count += 1
+                node2 = Node(data[i+1].buyer, data[i+1].nft)
+                node2.index = count
+                count += 1
 
-                    node2 = Node(data[i+1].buyer, data[i+1].nft)
-                    node2.index = count
-                    count += 1
+                # try:
+                #     self.connect_dir(node1, node2, weight=data[i+1].price_str)
+                # except:
+                #     print(len(self.graph), count)
 
-                    # try:
-                    #     self.connect_dir(node1, node2, weight=data[i+1].price_str)
-                    # except:
-                    #     print(len(self.graph), count)
+                #     self.connect_dir(node1, node2, weight=data[i+1].price_str)
 
-                    #     self.connect_dir(node1, node2, weight=data[i+1].price_str)
-
-                    file.writelines(f"{data[i].buyer} - {data[i+1].buyer} -> [{data[i+1].nft, data[i+1].price_str, data[i+1].date_time}] \n")
-                    
-                    # skip to row.Index + 2 since we have processed the txn at row.Index + 1
-                    jump = True
+                adjacency_graph.append(f"{data[i].buyer} - {data[i+1].buyer} -> [{data[i+1].nft, data[i+1].price_str, data[i+1].date_time}] \n")
+        
+        if self.save:
+            with open(output_path + "/original_adjacency_matrix.txt", "w") as file:
+                file.writelines(adjacency_graph)
+                
 
         self.src_buyer = self.graph[0][0]
                 
@@ -448,11 +451,11 @@ class Graph():
 
         return min_dist_list 
 
-def run_query(nft_txns, unique_buyer_txns):
+def run_query(nft_txns, unique_buyer_txns, save):
     graph = Graph(unique_buyer_txns)
 
     start_time = time.time_ns()
-    graph.build(nft_txns)
+    graph.build(nft_txns, save)
     end_time = time.time_ns()
     elapsed_time1 = (end_time - start_time)/1e9
 
@@ -499,7 +502,7 @@ if __name__ == "__main__":
     graph = Graph(unique_buyer_txns)
 
     start_time = time.time_ns()
-    graph.build(nft_txns)
+    graph.build(nft_txns, save=True)
     end_time = time.time_ns()
     elapsed_time = (end_time - start_time)/1e9
     print(f'The time taken to build the graph is {elapsed_time} secs\n')

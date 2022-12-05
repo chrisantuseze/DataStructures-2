@@ -18,7 +18,7 @@ class NFTTransaction:
     time_stamp: str
     date_time: str
     buyer: str
-    nft: str
+    token_id: str
     price: float
     price_str: str
 
@@ -75,47 +75,26 @@ def currency_converter(data):
       
   return data
 
-def merge_sort_by_nft(A):
-    if len(A) == 1:
-        return A
-
-    q = int(len(A)/2)
-    B = A.iloc[:q]
-    C = A.iloc[q:]
-
-    L = merge_sort_by_nft(B)
-    R = merge_sort_by_nft(C)
-    return merge_by_nft(L, R)
-
-def merge_by_nft(L, R):
-    n = len(L) + len(R)
-    i = j = 0
-    B = pd.DataFrame()
-    for k in range(0, n):
-        if j >= len(R) or (i < len(L) and L.iloc[i]['NFT'] >= R.iloc[j]['NFT']):
-            pd.concat([B, L.iloc[i]])
-            i = i + 1
-        else:
-            pd.concat([B, R.iloc[j]])
-            j = j + 1
-
-    return B
-
 def get_and_prepare_data():
     data = pd.read_csv("dataset.csv")
     data = data.dropna()
     data = data.drop_duplicates()
 
-    nft_txns = data[['Txn Hash', 'UnixTimestamp', 'Date Time (UTC)', 'Buyer', 'NFT', 'Price']]
+    nft_txns = data[['Txn Hash', 'UnixTimestamp', 'Date Time (UTC)', 'Buyer', 'Token ID', 'Price']]
 
-    nft_txns = nft_txns.iloc[0:5000]
+    # nft_txns = nft_txns.iloc[0:5000]
 
     nft_txns = currency_converter(nft_txns)
     unique_buyer_txns = nft_txns.groupby('Buyer', as_index=False).first()
-    nft_txns = nft_txns.sort_values(by=['NFT'], ascending=False)
+    nft_txns = nft_txns.sort_values(by=['Token ID', 'Date Time (UTC)'], ascending=[False, True])
     nft_txns = convert_to_object_list(nft_txns)
 
-    return nft_txns, unique_buyer_txns
+    unique_buyers = unique_buyer_txns['Buyer']
+    n_unique_buyers = len(unique_buyers)
+    buyer_timestamps = unique_buyer_txns['Date Time (UTC)']
+    token_ids = unique_buyer_txns['Token ID']
+
+    return nft_txns, unique_buyers, n_unique_buyers, buyer_timestamps, token_ids
 
 def convert_to_object_list(data) -> List[NFTTransaction]:
     transactions = []
@@ -125,29 +104,11 @@ def convert_to_object_list(data) -> List[NFTTransaction]:
             time_stamp=row['UnixTimestamp'],
             date_time=row['Date Time (UTC)'],
             buyer=row['Buyer'],
-            nft=row['NFT'],
+            token_id=row['Token ID'],
             price_str=row['Price'],
             price=0.0))
         
     return transactions
-
-def get_dataframe(data: List[NFTTransaction]):
-  txns_list = []
-
-  for row in data:
-    dic = {
-        'Txn Hash': row.txn_hash,
-        'UnixTimestamp': row.time_stamp,
-        'Date Time (UTC)': row.date_time,
-        'Buyer': row.buyer,
-        'NFT': row.nft,
-        'Price': row.price
-    }
-    txns_list.append(dic)
-
-  df = pd.DataFrame.from_records(txns_list)
-  df.to_excel("sorted_data.xlsx")
-  return df
 
 def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_5.png", rows=92):
     x_axis = [i for i in range(rows+1)]
@@ -162,19 +123,18 @@ def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_5.png", row
     plt.show()
 
 class Graph:
-    def __init__(self, unique_buyer_txns) -> None:
-
-        self.unique_buyer_txns = unique_buyer_txns
-        self.unique_buyers = unique_buyer_txns['Buyer']
-        self.n_unique_buyers = len(self.unique_buyers)
-        self.buyer_timestamps = unique_buyer_txns['Date Time (UTC)']
-        self.nfts = unique_buyer_txns['NFT']
+    def __init__(self, unique_buyers, n_unique_buyers, buyer_timestamps, token_ids, save=False) -> None:
+        self.unique_buyers = unique_buyers
+        self.n_unique_buyers = n_unique_buyers
+        self.buyer_timestamps = buyer_timestamps
+        self.token_ids = token_ids
 
         self.n_buyers = 0
         self.buyers = []
         self.graph = defaultdict(list)
 
         self.scc_output = []
+        self.save = save
 
     def addEdge(self, node1, node2):
         self.graph[node1].append(node2)
@@ -184,26 +144,28 @@ class Graph:
             self.buyers.append(buyer)
 
     def build(self, data: List[NFTTransaction]) -> None:
-        with open(output_path + "/original_adjacency_matrix.txt", "w") as file:
-            for i in range(1, len(data)): #also consider adding a logic to prevent a scenario where a relationship would exist for two buyers for the a different txns
-                if data[i-1].nft == data[i].nft and data[i-1].buyer != data[i].buyer:
-                    self.add_to_buyers_list(data[i-1].buyer)
-                    self.add_to_buyers_list(data[i].buyer)
+        adjacency_graph = []
+        for i in range(1, len(data)): #also consider adding a logic to prevent a scenario where a relationship would exist for two buyers for the a different txns
+          if data[i-1].token_id == data[i].token_id and data[i-1].buyer != data[i].buyer:
+            self.add_to_buyers_list(data[i-1].buyer)
+            self.add_to_buyers_list(data[i].buyer)
 
-                    # Create an edge to build the graph
-                    self.addEdge(self.buyers.index(data[i-1].buyer), self.buyers.index(data[i].buyer))
+            # Create an edge to build the graph
+            self.addEdge(self.buyers.index(data[i-1].buyer), self.buyers.index(data[i].buyer))
+            adjacency_graph.append(f'{data[i-1].buyer} - {data[i].buyer} -> [{data[i].token_id, data[i].price_str, data[i].date_time}] \n')
 
-                    file.writelines(f'{data[i-1].buyer} - {data[i].buyer} -> [{data[i].nft, data[i].price_str, data[i].date_time}] \n')
+          elif data[i-1].token_id == data[i].token_id and data[i-1].buyer == data[i].buyer and i + 1 < len(data) and data[i].buyer != data[i+1].buyer:
+            self.add_to_buyers_list(data[i].buyer)
+            self.add_to_buyers_list(data[i+1].buyer)
 
-                elif data[i-1].nft == data[i].nft and data[i-1].buyer == data[i].buyer and i + 1 < len(data) and data[i].buyer != data[i+1].buyer:
-                    self.add_to_buyers_list(data[i].buyer)
-                    self.add_to_buyers_list(data[i+1].buyer)
+            # Create an edge to build the graph
+            self.addEdge(self.buyers.index(data[i].buyer), self.buyers.index(data[i+1].buyer))
+            adjacency_graph.append(f'{data[i].buyer} - {data[i+1].buyer} -> [{data[i+1].token_id, data[i+1].price_str, data[i+1].date_time}] \n')
 
-                    # Create an edge to build the graph
-                    self.addEdge(self.buyers.index(data[i].buyer), self.buyers.index(data[i+1].buyer))
-
-                    file.writelines(f'{data[i].buyer} - {data[i+1].buyer} -> [{data[i+1].nft, data[i+1].price_str, data[i+1].date_time}] \n')
-                
+        if self.save:
+          with open(output_path + "/original_adjacency_matrix.txt", "w") as file:
+            file.writelines(adjacency_graph)
+            
         self.n_buyers = len(self.buyers)
 
     def top_sort_dfs(self, start, visited, order):
@@ -228,14 +190,14 @@ class Graph:
     def dfs(self, start, visited):
         visited[start] = True
         
-        self.scc_output.append(f"({self.unique_buyers[start]}, {self.buyer_timestamps[start], self.nfts[start]})")
+        self.scc_output.append(f"({self.unique_buyers[start]}, {self.buyer_timestamps[start], self.token_ids[start]})")
 
         for i in self.graph[start]:
             if not visited[i]:
                 self.dfs(i, visited)
 
     def get_transpose(self):
-        graph = Graph(self.unique_buyer_txns)
+        graph = Graph(self.unique_buyers, self.n_unique_buyers, self.buyer_timestamps, self.token_ids)
 
         for i in self.graph:
             for j in self.graph[i]:
@@ -274,12 +236,16 @@ class Graph:
 
                 count += 1
 
-        with open(output_path + "/scc_adjacency_matrix.txt", "w") as file:
-          for row in transposed_graph.scc_output:
-            file.writelines(f"{row}\n")
+        sccs = []
+        for row in transposed_graph.scc_output:
+          sccs.append(f"{row}\n")
 
-def run_query(nft_txns, unique_buyer_txns):
-    graph = Graph(unique_buyer_txns)
+        if self.save:
+          with open(output_path + "/scc_adjacency_matrix.txt", "w") as file:
+            file.writelines(sccs)
+
+def run_query(nft_txns, unique_buyers, n_unique_buyers, buyer_timestamps, token_ids, save):
+    graph = Graph(unique_buyers, n_unique_buyers, buyer_timestamps, token_ids, save)
 
     start_time = time.time_ns()
     graph.build(nft_txns)
@@ -306,7 +272,7 @@ if __name__ == "__main__":
     if not os.path.isdir(output_path):
         os.mkdir(output_path)
 
-    nft_txns, unique_buyer_txns = get_and_prepare_data()
+    nft_txns, unique_buyers, n_unique_buyers, buyer_timestamps, token_ids = get_and_prepare_data()
 
     elapsed_times = []
     asymptotic_times = []
@@ -315,7 +281,11 @@ if __name__ == "__main__":
     # Run in intervals of 1000, 2000, 3000, ......
     for i in range(rows + 1):
         n = (i + 1) * 1000
-        build_elapsed_time, run_elapsed_time = run_query(nft_txns[0: n], unique_buyer_txns[0: n])
+        build_elapsed_time, run_elapsed_time = run_query(
+            nft_txns[0: n], unique_buyers[0: n], 
+            n_unique_buyers=len(unique_buyers[0: n]), buyer_timestamps=buyer_timestamps[0: n], 
+            token_ids=token_ids[0: n], save=(i == rows)
+          )
         elapsed_times.append(run_elapsed_time)
 
         asymptotic_times.append(n * 2) #TODO change this to the actual asymptotic time (build time + SCC time)
