@@ -85,7 +85,7 @@ def get_and_prepare_data():
     # nft_txns = nft_txns.iloc[0:5000]
 
     nft_txns = currency_converter(nft_txns)
-    nft_txns = nft_txns.sort_values(by=['Token ID', 'Date Time (UTC)'], ascending=[False, True])
+    nft_txns = nft_txns.sort_values(by=['Token ID', 'UnixTimestamp'], ascending=[False, True])
     nft_txns = convert_to_object_list(nft_txns)
 
     return nft_txns
@@ -137,21 +137,15 @@ def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_4.png", row
 class Graph:
   def __init__(self, data: List[NFTTransaction]) -> None:
     self.data = data
+    self.adjacency_graph = []
 
   def build(self, save=False) -> None:
-    if not save:
-      return
-
-    adjacency_graph = []
     for i in range(1, len(self.data)):
         if self.data[i-1].token_id == self.data[i].token_id and self.data[i-1].buyer != self.data[i].buyer:
-          adjacency_graph.append(f"{self.data[i-1].buyer} - {self.data[i].buyer} -> [{self.data[i].token_id, self.data[i].price_str, self.data[i].date_time}] \n")
+          self.adjacency_graph.append(f"{self.data[i-1].buyer} - {self.data[i].buyer} -> [{self.data[i].token_id, self.data[i].price_str, self.data[i].date_time}] \n")
 
         elif self.data[i-1].token_id == self.data[i].token_id and self.data[i-1].buyer == self.data[i].buyer and i + 1 < len(self.data) and self.data[i].buyer != self.data[i+1].buyer:
-          adjacency_graph.append(f"{self.data[i].buyer} - {self.data[i+1].buyer} -> [{self.data[i+1].token_id, self.data[i+1].price_str, self.data[i+1].date_time}] \n")
-
-    with open(output_path + "/query4_adjacency_matrix.txt", "w") as file:
-      file.writelines(adjacency_graph)
+          self.adjacency_graph.append(f"{self.data[i].buyer} - {self.data[i+1].buyer} -> [{self.data[i+1].token_id, self.data[i+1].price_str, self.data[i+1].date_time}] \n")
 
 def run_query(nft_txns, save):
     graph = Graph(nft_txns)
@@ -159,9 +153,9 @@ def run_query(nft_txns, save):
     start_time = time.time_ns()
     graph.build(save)
     end_time = time.time_ns()
-    elapsed_time = (end_time - start_time)/1e9
+    elapsed_time = (end_time - start_time)
 
-    return elapsed_time
+    return elapsed_time, graph.adjacency_graph
 
 if __name__ == "__main__":
     sys.setrecursionlimit(100000)
@@ -185,10 +179,15 @@ if __name__ == "__main__":
     # Run in intervals of 1000, 2000, 3000, ......
     for i in range(rows + 1):
         n = (i + 1) * 1000
-        run_elapsed_time = run_query(nft_txns[0: n], save=(i == rows))
-        elapsed_times.append(run_elapsed_time)
+        run_elapsed_time_ns, adjacency_graph = run_query(nft_txns[0: n], save=(i == rows))
+        elapsed_times.append(run_elapsed_time_ns)
 
-        asymptotic_times.append(n * 2) #TODO change this to the actual asymptotic time (build time)
-        print(f'The total time taken to build graph for {n} transactions is {run_elapsed_time} secs\n')
+        asymptotic_run_time = n ** 2
+        asymptotic_times.append(asymptotic_run_time)
+        print(f'The total time taken to build graph for {n} transactions is {run_elapsed_time_ns/1e9} secs\n')
+
+        if i == rows:
+          with open(output_path + "/query4_adjacency_matrix.txt", "w") as file:
+            file.writelines(adjacency_graph)
 
     plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=elapsed_times, filename=output_path+"/query_4.png", rows=rows)

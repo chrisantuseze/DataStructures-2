@@ -82,11 +82,11 @@ def get_and_prepare_data():
 
     nft_txns = data[['Txn Hash', 'UnixTimestamp', 'Date Time (UTC)', 'Buyer', 'Token ID', 'Price']]
 
-    # nft_txns = nft_txns.iloc[0:5000]
+    nft_txns = nft_txns.iloc[0:5000]
 
     nft_txns = currency_converter(nft_txns)
     unique_buyer_txns = nft_txns.groupby('Buyer', as_index=False).first()
-    nft_txns = nft_txns.sort_values(by=['Token ID', 'Date Time (UTC)'], ascending=[False, True])
+    nft_txns = nft_txns.sort_values(by=['Token ID', 'UnixTimestamp'], ascending=[False, True])
     nft_txns = convert_to_object_list(nft_txns)
 
     unique_buyers = unique_buyer_txns['Buyer']
@@ -117,7 +117,7 @@ def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_5.png", row
     plt.xlabel("Transaction Batch (x1000)")
     plt.ylabel("Runtime")
     plt.title("Query 5 Runtime vs Transaction batch size")
-    plt.legend(['Asymptotic Runtime', 'Actual Runtime'], loc='upper left')
+    plt.legend(['Asymptotic Runtime (x5000)', 'Actual Runtime'], loc='upper left')
 
     plt.savefig(filename)
     plt.show()
@@ -135,6 +135,7 @@ class Graph:
 
         self.scc_output = []
         self.save = save
+        self.adjacency_graph = []
 
     def addEdge(self, node1, node2):
         self.graph[node1].append(node2)
@@ -144,7 +145,6 @@ class Graph:
             self.buyers.append(buyer)
 
     def build(self, data: List[NFTTransaction]) -> None:
-        adjacency_graph = []
         for i in range(1, len(data)): #also consider adding a logic to prevent a scenario where a relationship would exist for two buyers for the a different txns
           if data[i-1].token_id == data[i].token_id and data[i-1].buyer != data[i].buyer:
             self.add_to_buyers_list(data[i-1].buyer)
@@ -152,7 +152,7 @@ class Graph:
 
             # Create an edge to build the graph
             self.addEdge(self.buyers.index(data[i-1].buyer), self.buyers.index(data[i].buyer))
-            adjacency_graph.append(f'{data[i-1].buyer} - {data[i].buyer} -> [{data[i].token_id, data[i].price_str, data[i].date_time}] \n')
+            self.adjacency_graph.append(f'{data[i-1].buyer} - {data[i].buyer} -> [{data[i].token_id, data[i].price_str, data[i].date_time}] \n')
 
           elif data[i-1].token_id == data[i].token_id and data[i-1].buyer == data[i].buyer and i + 1 < len(data) and data[i].buyer != data[i+1].buyer:
             self.add_to_buyers_list(data[i].buyer)
@@ -160,11 +160,7 @@ class Graph:
 
             # Create an edge to build the graph
             self.addEdge(self.buyers.index(data[i].buyer), self.buyers.index(data[i+1].buyer))
-            adjacency_graph.append(f'{data[i].buyer} - {data[i+1].buyer} -> [{data[i+1].token_id, data[i+1].price_str, data[i+1].date_time}] \n')
-
-        if self.save:
-          with open(output_path + "/original_adjacency_matrix.txt", "w") as file:
-            file.writelines(adjacency_graph)
+            self.adjacency_graph.append(f'{data[i].buyer} - {data[i+1].buyer} -> [{data[i+1].token_id, data[i+1].price_str, data[i+1].date_time}] \n')
             
         self.n_buyers = len(self.buyers)
 
@@ -214,7 +210,7 @@ class Graph:
         
         order.append(start)
 
-    def strongly_connected_components(self):
+    def strongly_connected_components(self) -> list:
         order = [] * self.n_buyers
 
         visited = [False] * self.n_buyers
@@ -240,9 +236,7 @@ class Graph:
         for row in transposed_graph.scc_output:
           sccs.append(f"{row}\n")
 
-        if self.save:
-          with open(output_path + "/scc_adjacency_matrix.txt", "w") as file:
-            file.writelines(sccs)
+        return sccs
 
 def run_query(nft_txns, unique_buyers, n_unique_buyers, buyer_timestamps, token_ids, save):
     graph = Graph(unique_buyers, n_unique_buyers, buyer_timestamps, token_ids, save)
@@ -250,14 +244,14 @@ def run_query(nft_txns, unique_buyers, n_unique_buyers, buyer_timestamps, token_
     start_time = time.time_ns()
     graph.build(nft_txns)
     end_time = time.time_ns()
-    elapsed_time1 = (end_time - start_time)/1e9
+    elapsed_time1 = (end_time - start_time)
 
     start_time = time.time_ns()
-    graph.strongly_connected_components()
+    sccs = graph.strongly_connected_components()
     end_time = time.time_ns()
-    elapsed_time2 = (end_time - start_time)/1e9
+    elapsed_time2 = (end_time - start_time)
 
-    return elapsed_time1, elapsed_time2
+    return elapsed_time1, elapsed_time2, graph.adjacency_graph, sccs
 
 if __name__ == "__main__":
     sys.setrecursionlimit(100000)
@@ -281,14 +275,24 @@ if __name__ == "__main__":
     # Run in intervals of 1000, 2000, 3000, ......
     for i in range(rows + 1):
         n = (i + 1) * 1000
-        build_elapsed_time, run_elapsed_time = run_query(
+        build_elapsed_time_ns, run_elapsed_time_ns, adjacency_graph, sccs = run_query(
             nft_txns[0: n], unique_buyers[0: n], 
             n_unique_buyers=len(unique_buyers[0: n]), buyer_timestamps=buyer_timestamps[0: n], 
             token_ids=token_ids[0: n], save=(i == rows)
           )
-        elapsed_times.append(run_elapsed_time)
+        elapsed_times.append(run_elapsed_time_ns)
 
-        asymptotic_times.append(n * 2) #TODO change this to the actual asymptotic time (build time + SCC time)
-        print(f'The total time taken to build graph and perform SCC for {n} transactions is {run_elapsed_time} secs\n')
+        #  O(V + E)
+        asymptotic_run_time = (n + len(adjacency_graph))
+        asymptotic_run_time *= 5000 # This ensures that both are on the same scale
+        asymptotic_times.append(asymptotic_run_time)
+        print(f'The total time taken to build graph and perform SCC for {n} transactions is {run_elapsed_time_ns/1e9} secs\n')
+
+        if i == rows:
+          with open(output_path + "/original_adjacency_matrix.txt", "w") as file:
+            file.writelines(adjacency_graph)
+
+          with open(output_path + "/scc_adjacency_matrix.txt", "w") as file:
+            file.writelines(sccs)
 
     plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=elapsed_times, filename=output_path+"/query_5.png", rows=rows)

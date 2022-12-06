@@ -1,5 +1,4 @@
 #!/bin/env python
-
 import sys
 import os
 import math
@@ -8,6 +7,7 @@ import pandas as pd
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
+from threading import Thread
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import List
@@ -82,11 +82,11 @@ def get_and_prepare_data():
 
     nft_txns = data[['Txn Hash', 'UnixTimestamp', 'Date Time (UTC)', 'Buyer', 'Token ID', 'Price']]
 
-    # nft_txns = nft_txns.iloc[0:5000]
+    nft_txns = nft_txns.iloc[0:5000]
 
     nft_txns = currency_converter(nft_txns)
     unique_buyer_txns = nft_txns.groupby('Buyer', as_index=False).first()
-    nft_txns = nft_txns.sort_values(by=['Token ID', 'Date Time (UTC)'], ascending=[False, True])
+    nft_txns = nft_txns.sort_values(by=['Token ID', 'UnixTimestamp'], ascending=[False, True])
     nft_txns = convert_to_object_list(nft_txns)
 
     unique_buyers = unique_buyer_txns['Buyer']
@@ -118,10 +118,10 @@ def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_6.png", row
     plt.xlabel("Transaction Batch (x1000)")
     plt.ylabel("Runtime")
     plt.title("Query 6 Runtime vs Transaction batch size")
-    plt.legend(['Asymptotic Runtime', 'Min ST Runtime', 'Max ST Runtime'], loc='upper left')
+    plt.legend(['Asymptotic Runtime (x50000)', 'Min ST Runtime', 'Max ST Runtime'], loc='upper left')
 
     plt.savefig(filename)
-    plt.show()
+    # plt.show()
 
 
 class Graph:
@@ -136,8 +136,7 @@ class Graph:
         self.buyers = []
         self.graph = []
         self.save = save
-
-        self.adjacency_matrix = np.zeros((self.n_unique_buyers, self.n_unique_buyers), dtype=tuple)
+        self.adjacency_graph = []
 
     def addEdge(self, node1, node2, price):
         self.graph.append([node1, node2, price])
@@ -148,7 +147,6 @@ class Graph:
 
     def build(self, data: List[NFTTransaction]) -> None:
         count = 0
-        adjacency_graph = []
         for i in range(1, len(data)):
           if data[i-1].token_id == data[i].token_id and data[i-1].buyer != data[i].buyer:
             self.buyers.insert(count, data[i-1].buyer)
@@ -156,7 +154,7 @@ class Graph:
             self.addEdge(count, count + 1, float(data[i].price_str))
             count += 2
 
-            adjacency_graph.append(f"{data[i-1].buyer} - {data[i].buyer} -> [{data[i].token_id, data[i].price_str, data[i].date_time}] \n")
+            self.adjacency_graph.append(f"{data[i-1].buyer} - {data[i].buyer} -> [{data[i].token_id, data[i].price_str, data[i].date_time}] \n")
 
           elif data[i-1].token_id == data[i].token_id and data[i-1].buyer == data[i].buyer and i + 1 < len(data) and data[i].buyer != data[i+1].buyer:
             self.buyers.insert(count, data[i].buyer)
@@ -164,11 +162,7 @@ class Graph:
             self.addEdge(count, count + 1, float(data[i+1].price_str))
             count += 2
 
-            adjacency_graph.append(f"{data[i].buyer} - {data[i+1].buyer} -> [{data[i+1].token_id, data[i+1].price_str, data[i+1].date_time}] \n")
-
-        if self.save:
-          with open(output_path + "/original_adjacency_matrix.txt", "w") as file:
-            file.writelines(adjacency_graph)
+            self.adjacency_graph.append(f"{data[i].buyer} - {data[i+1].buyer} -> [{data[i+1].token_id, data[i+1].price_str, data[i+1].date_time}] \n")
                 
      # Search function
     def find(self, parent, i):
@@ -199,7 +193,7 @@ class Graph:
           pass
 
     #  Applying Kruskal algorithm
-    def kruskal(self, filename, is_reverse):
+    def kruskal(self, filename, is_reverse) -> list:
         result = []
         i, e = 0, 0
         self.graph = sorted(self.graph, key=lambda item: item[2], reverse=is_reverse)
@@ -248,17 +242,14 @@ class Graph:
         output.append("------------------------------------------------------------------------------\n")
         output.append(f"The {tree} cost is {cost}\n")
         output.append("------------------------------------------------------------------------------\n")
+        
+        return output
 
-        if self.save:
-          with open(output_path + "/" + filename, "w") as file:
-            file.writelines(output)
-          
+    def kruskal_min_st(self) -> list:
+        return self.kruskal("min_st_adjacency_matrix.txt", False)
 
-    def kruskal_min_st(self):
-        self.kruskal("min_st_adjacency_matrix.txt", False)
-
-    def kruskal_max_st(self):
-        self.kruskal("max_st_adjacency_matrix.txt", True)
+    def kruskal_max_st(self) -> list:
+        return self.kruskal("max_st_adjacency_matrix.txt", True)
 
 def run_query(nft_txns, unique_buyer_txns, unique_buyers, n_unique_buyers, buyer_timestamps, token_ids, save):
     graph = Graph(unique_buyer_txns, unique_buyers, n_unique_buyers, buyer_timestamps, token_ids, save)
@@ -266,20 +257,21 @@ def run_query(nft_txns, unique_buyer_txns, unique_buyers, n_unique_buyers, buyer
     start_time = time.time_ns()
     graph.build(nft_txns)
     end_time = time.time_ns()
-    elapsed_time1 = (end_time - start_time)/1e9
+    elapsed_time1 = (end_time - start_time)
+
     # print(f'The time taken to build the graph is {elapsed_time1} secs\n')
 
     start_time = time.time_ns()
-    graph.kruskal_min_st()
+    min_st_output = graph.kruskal_min_st()
     end_time = time.time_ns()
-    elapsed_time2 = (end_time - start_time)/1e9
+    elapsed_time2 = (end_time - start_time)
 
     start_time = time.time_ns()
-    graph.kruskal_max_st()
+    max_st_output = graph.kruskal_max_st()
     end_time = time.time_ns()
-    elapsed_time3 = (end_time - start_time)/1e9
+    elapsed_time3 = (end_time - start_time)
 
-    return elapsed_time1, elapsed_time2, elapsed_time3
+    return elapsed_time1, elapsed_time2, elapsed_time3, graph.adjacency_graph, min_st_output, max_st_output 
 
 if __name__ == "__main__":
     sys.setrecursionlimit(100000)
@@ -304,16 +296,29 @@ if __name__ == "__main__":
     # Run in intervals of 1000, 2000, 3000, ......
     for i in range(rows + 1):
         n = (i + 1) * 1000
-        build_elapsed_time, min_st_run_elapsed_time, max_st_run_elapsed_time = run_query(
+        build_elapsed_time_ns, min_st_run_elapsed_time_ns, max_st_run_elapsed_time_ns, adjacency_graph, min_st_output, max_st_output = run_query(
             nft_txns[0: n], unique_buyer_txns[0: n], unique_buyers[0: n], 
             n_unique_buyers=len(unique_buyers[0: n]), buyer_timestamps=buyer_timestamps[0: n], 
             token_ids=token_ids[0: n], save=(i == rows)
           )
-        min_st_elapsed_times.append(min_st_run_elapsed_time)
-        max_st_elapsed_times.append(max_st_run_elapsed_time)
+        min_st_elapsed_times.append(min_st_run_elapsed_time_ns)
+        max_st_elapsed_times.append(max_st_run_elapsed_time_ns)
 
-        asymptotic_times.append(n * 2) #TODO change this to the actual asymptotic time (build time + SCC time)
-        print(f'The total time taken to for both minimum and maximum spanning tree for {n} transactions is {min_st_run_elapsed_time + max_st_run_elapsed_time} secs\n')
+        #  O(ElogV)
+        asymptotic_run_time = (len(adjacency_graph) * np.log10(n))
+        asymptotic_run_time *= 50000 # This ensures that both are on the same scale
+        asymptotic_times.append(asymptotic_run_time * 2) 
+        print(f'The total time taken to for both minimum and maximum spanning tree for {n} transactions is {min_st_run_elapsed_time_ns/1e9 + max_st_run_elapsed_time_ns/1e9} secs\n')
+
+        if i == rows:
+          with open(output_path + "/original_adjacency_matrix.txt", "w") as file:
+            file.writelines(adjacency_graph)
+
+          with open(output_path + "/min_st_adjacency_matrix.txt", "w") as file:
+            file.writelines(min_st_output)
+
+          with open(output_path + "/max_st_adjacency_matrix.txt", "w") as file:
+            file.writelines(max_st_output)
 
     #Note since the two runtimes would have close values, one many superimpose on the other. It is not a bug. Although it won't happen once everything is done
     plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=[min_st_elapsed_times, max_st_elapsed_times], filename=output_path + "/query_6.png", rows=rows)
