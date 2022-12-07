@@ -80,12 +80,12 @@ def get_and_prepare_data():
     data = data.dropna()
     data = data.drop_duplicates()
 
-    nft_txns = data[['Txn Hash', 'UnixTimestamp', 'Date Time (UTC)', 'Buyer', 'Token ID', 'Price']]
+    nft_txns = data[['Txn Hash', 'UnixTimestamp', 'Date Time (UTC)', 'Buyer', 'Token ID', 'NFT', 'Price']]
 
     # nft_txns = nft_txns.iloc[0:5000]
 
     nft_txns = currency_converter(nft_txns)
-    nft_txns = nft_txns.sort_values(by=['Token ID', 'UnixTimestamp'], ascending=[False, True])
+    nft_txns = nft_txns.sort_values(by=['NFT', 'Token ID', 'UnixTimestamp'], ascending=[False, False, True])
     nft_txns = convert_to_object_list(nft_txns)
 
     return nft_txns
