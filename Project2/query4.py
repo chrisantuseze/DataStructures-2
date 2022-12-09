@@ -129,29 +129,28 @@ def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_4.png", row
     plt.xlabel("Transaction Batch (x1000)")
     plt.ylabel("Runtime")
     plt.title("Query 4 Runtime vs Transaction batch size")
-    plt.legend(['Asymptotic Runtime', 'Actual Runtime'], loc='upper left')
+    plt.legend(['Asymptotic Runtime (x500)', 'Actual Runtime'], loc='upper left')
 
     plt.savefig(filename)
-    plt.show()
+    # plt.show()
 
 class Graph:
-  def __init__(self, data: List[NFTTransaction]) -> None:
-    self.data = data
+  def __init__(self) -> None:
     self.adjacency_graph = []
 
-  def build(self, save=False) -> None:
-    for i in range(1, len(self.data)):
-        if self.data[i-1].token_id == self.data[i].token_id and self.data[i-1].buyer != self.data[i].buyer:
-          self.adjacency_graph.append(f"{self.data[i-1].buyer} - {self.data[i].buyer} -> [{self.data[i].token_id, self.data[i].price_str, self.data[i].date_time}] \n")
+  def build(self, data: List[NFTTransaction]) -> None:
+    for i in range(1, len(data)):
+        if data[i-1].token_id == data[i].token_id and data[i-1].buyer != data[i].buyer:
+          self.adjacency_graph.append(f"{data[i-1].buyer} - {data[i].buyer} -> [{data[i].token_id, data[i].price_str, data[i].date_time}] \n")
 
-        elif self.data[i-1].token_id == self.data[i].token_id and self.data[i-1].buyer == self.data[i].buyer and i + 1 < len(self.data) and self.data[i].buyer != self.data[i+1].buyer:
-          self.adjacency_graph.append(f"{self.data[i].buyer} - {self.data[i+1].buyer} -> [{self.data[i+1].token_id, self.data[i+1].price_str, self.data[i+1].date_time}] \n")
+        elif data[i-1].token_id == data[i].token_id and data[i-1].buyer == data[i].buyer and i + 1 < len(data) and data[i].buyer != data[i+1].buyer:
+          self.adjacency_graph.append(f"{data[i].buyer} - {data[i+1].buyer} -> [{data[i+1].token_id, data[i+1].price_str, data[i+1].date_time}] \n")
 
-def run_query(nft_txns, save):
-    graph = Graph(nft_txns)
+def run_query(nft_txns):
+    graph = Graph()
 
     start_time = time.time_ns()
-    graph.build(save)
+    graph.build(nft_txns)
     end_time = time.time_ns()
     elapsed_time = (end_time - start_time)
 
@@ -179,15 +178,17 @@ if __name__ == "__main__":
     # Run in intervals of 1000, 2000, 3000, ......
     for i in range(rows + 1):
         n = (i + 1) * 1000
-        run_elapsed_time_ns, adjacency_graph = run_query(nft_txns[0: n], save=(i == rows))
+        run_elapsed_time_ns, adjacency_graph = run_query(nft_txns[0: n])
         elapsed_times.append(run_elapsed_time_ns)
 
-        asymptotic_run_time = n ** 2
+        asymptotic_run_time = n
+        asymptotic_run_time *= 500 # This ensures that both are on the same scale
         asymptotic_times.append(asymptotic_run_time)
         print(f'The total time taken to build graph for {n} transactions is {run_elapsed_time_ns/1e9} secs\n')
 
         if i == rows:
           with open(output_path + "/query4_adjacency_matrix.txt", "w") as file:
+            file.writelines("Buyer 1 ------------------------------------> Buyer 2 ------------------------------------> Token ID ------> Price -------> Timestamp\n\n")
             file.writelines(adjacency_graph)
 
     plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=elapsed_times, filename=output_path+"/query_4.png", rows=rows)

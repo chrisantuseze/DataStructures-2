@@ -82,7 +82,7 @@ def get_and_prepare_data():
 
     nft_txns = data[['Txn Hash', 'UnixTimestamp', 'Date Time (UTC)', 'Buyer', 'Token ID', 'NFT', 'Price']]
 
-    nft_txns = nft_txns.iloc[0:5000]
+    # nft_txns = nft_txns.iloc[0:5000]
 
     nft_txns = currency_converter(nft_txns)
     unique_buyer_txns = nft_txns.groupby('Buyer', as_index=False).first()
@@ -259,8 +259,6 @@ def run_query(nft_txns, unique_buyer_txns, unique_buyers, n_unique_buyers, buyer
     end_time = time.time_ns()
     elapsed_time1 = (end_time - start_time)
 
-    # print(f'The time taken to build the graph is {elapsed_time1} secs\n')
-
     start_time = time.time_ns()
     min_st_output = graph.kruskal_min_st()
     end_time = time.time_ns()
@@ -311,7 +309,8 @@ if __name__ == "__main__":
         print(f'The total time taken to for both minimum and maximum spanning tree for {n} transactions is {min_st_run_elapsed_time_ns/1e9 + max_st_run_elapsed_time_ns/1e9} secs\n')
 
         if i == rows:
-          with open(output_path + "/original_adjacency_matrix.txt", "w") as file:
+          with open(output_path + "/query6_original_adjacency_matrix.txt", "w") as file:
+            file.writelines("Buyer 1 ------------------------------------> Buyer 2 ------------------------------------> Token ID ------> Price -------> Timestamp\n\n")
             file.writelines(adjacency_graph)
 
           with open(output_path + "/min_st_adjacency_matrix.txt", "w") as file:

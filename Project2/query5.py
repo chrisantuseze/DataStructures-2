@@ -82,7 +82,7 @@ def get_and_prepare_data():
 
     nft_txns = data[['Txn Hash', 'UnixTimestamp', 'Date Time (UTC)', 'Buyer', 'Token ID', 'NFT', 'Price']]
 
-    nft_txns = nft_txns.iloc[0:5000]
+    # nft_txns = nft_txns.iloc[0:5000]
 
     nft_txns = currency_converter(nft_txns)
     unique_buyer_txns = nft_txns.groupby('Buyer', as_index=False).first()
@@ -120,7 +120,7 @@ def plot_graph(asymptotic_runtimes, actual_runtimes, filename="query_5.png", row
     plt.legend(['Asymptotic Runtime (x5000)', 'Actual Runtime'], loc='upper left')
 
     plt.savefig(filename)
-    plt.show()
+    # plt.show()
 
 class Graph:
     def __init__(self, unique_buyers, n_unique_buyers, buyer_timestamps, token_ids, save=False) -> None:
@@ -145,14 +145,14 @@ class Graph:
             self.buyers.append(buyer)
 
     def build(self, data: List[NFTTransaction]) -> None:
-        for i in range(1, len(data)): #also consider adding a logic to prevent a scenario where a relationship would exist for two buyers for the a different txns
+        for i in range(1, len(data)):
           if data[i-1].token_id == data[i].token_id and data[i-1].buyer != data[i].buyer:
             self.add_to_buyers_list(data[i-1].buyer)
             self.add_to_buyers_list(data[i].buyer)
 
             # Create an edge to build the graph
             self.addEdge(self.buyers.index(data[i-1].buyer), self.buyers.index(data[i].buyer))
-            self.adjacency_graph.append(f'{data[i-1].buyer} - {data[i].buyer} -> [{data[i].token_id, data[i].price_str, data[i].date_time}] \n')
+            self.adjacency_graph.append(f"{data[i-1].buyer} - {data[i].buyer} -> [{data[i].token_id, data[i].price_str, data[i].date_time}] \n")
 
           elif data[i-1].token_id == data[i].token_id and data[i-1].buyer == data[i].buyer and i + 1 < len(data) and data[i].buyer != data[i+1].buyer:
             self.add_to_buyers_list(data[i].buyer)
@@ -160,7 +160,7 @@ class Graph:
 
             # Create an edge to build the graph
             self.addEdge(self.buyers.index(data[i].buyer), self.buyers.index(data[i+1].buyer))
-            self.adjacency_graph.append(f'{data[i].buyer} - {data[i+1].buyer} -> [{data[i+1].token_id, data[i+1].price_str, data[i+1].date_time}] \n')
+            self.adjacency_graph.append(f"{data[i].buyer} - {data[i+1].buyer} -> [{data[i+1].token_id, data[i+1].price_str, data[i+1].date_time}] \n")
             
         self.n_buyers = len(self.buyers)
 
@@ -289,7 +289,8 @@ if __name__ == "__main__":
         print(f'The total time taken to build graph and perform SCC for {n} transactions is {run_elapsed_time_ns/1e9} secs\n')
 
         if i == rows:
-          with open(output_path + "/original_adjacency_matrix.txt", "w") as file:
+          with open(output_path + "/query5_original_adjacency_matrix.txt", "w") as file:
+            file.writelines("Buyer 1 ------------------------------------> Buyer 2 ------------------------------------> Token ID ------> Price -------> Timestamp\n\n")
             file.writelines(adjacency_graph)
 
           with open(output_path + "/scc_adjacency_matrix.txt", "w") as file:

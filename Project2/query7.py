@@ -82,7 +82,7 @@ def get_and_prepare_data():
 
     nft_txns = data[['Txn Hash', 'UnixTimestamp', 'Date Time (UTC)', 'Buyer', 'Token ID', 'NFT', 'Price']]
 
-    nft_txns = nft_txns.iloc[0:50000]
+    # nft_txns = nft_txns.iloc[0:50000]
 
     nft_txns = currency_converter(nft_txns)
 
@@ -425,13 +425,13 @@ if __name__ == "__main__":
 
         #  O(ElogV)
         asymptotic_run_time = (n + len(adjacency_graph) * np.log10(n))
-        asymptotic_run_time *= 5000 # This ensures that both are on the same scale
-        # print(asymptotic_run_time)
+        asymptotic_run_time *= 1000 # This ensures that both are on the same scale
         asymptotic_times.append(asymptotic_run_time) 
         print(f'The total time taken to build graph and perform SCC for {n} transactions is {run_elapsed_time_ns/1e9} secs\n')
 
         if i == rows:
-          with open(output_path + "/original_adjacency_matrix.txt", "w") as file:
+          with open(output_path + "/query7_original_adjacency_matrix.txt", "w") as file:
+            file.writelines("Buyer 1 ------------------------------------> Buyer 2 ------------------------------------> Token ID ------> Price -------> Timestamp\n\n")
             file.writelines(adjacency_graph)
 
           with open(output_path + "/shortest_paths_adjacency_matrix.txt", "w") as file:
