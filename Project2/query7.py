@@ -437,5 +437,5 @@ if __name__ == "__main__":
           with open(output_path + "/shortest_paths_adjacency_matrix.txt", "w") as file:
             file.writelines(f"The shortest paths of the connnected nodes from the source are: \n\n")
             file.writelines(shortest_paths)
-
+  
     plot_graph(asymptotic_runtimes=asymptotic_times, actual_runtimes=elapsed_times, filename=output_path+"/query_7.png", rows=rows)
